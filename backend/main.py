@@ -8,7 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from agents.pantry_agent import PantryAgent
 from models.schemas import LoginRequest, PantryUpdateRequest, RegisterRequest
-from services.supabase_service import SupabaseService
+from services.supabase_service import (
+    DuplicateUsernameError,
+    SupabaseConfigError,
+    SupabaseInsertError,
+    SupabaseService,
+)
 
 
 # Load backend/.env for local development.
@@ -47,12 +52,17 @@ def register_user(payload: RegisterRequest) -> dict:
 
     try:
         return supabase_service.create_user(username=username, password=password)
-    except ValueError as exc:
-        message = str(exc)
-        if message == "Username already exists.":
-            raise HTTPException(status_code=409, detail={"error": message})
-        raise HTTPException(status_code=400, detail={"error": message})
-    except Exception:
+    except DuplicateUsernameError:
+        raise HTTPException(status_code=409, detail={"error": "Username already exists."})
+    except SupabaseConfigError as exc:
+        print(f"[register_user] {type(exc).__name__}: {exc}")
+        raise HTTPException(status_code=500, detail={"error": str(exc)})
+    except SupabaseInsertError as exc:
+        print(f"[register_user] {type(exc).__name__}: {exc}")
+        raise HTTPException(status_code=500, detail={"error": "Failed to register user."})
+    except Exception as exc:
+        # Safe debug log: exception type and message only.
+        print(f"[register_user] Unexpected error: {type(exc).__name__}: {exc}")
         raise HTTPException(status_code=500, detail={"error": "Failed to register user."})
 
 

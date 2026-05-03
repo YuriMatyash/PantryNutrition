@@ -9,6 +9,18 @@ from typing import Optional
 from supabase import Client, create_client
 
 
+class SupabaseConfigError(Exception):
+    """Raised when required Supabase configuration is missing."""
+
+
+class DuplicateUsernameError(Exception):
+    """Raised when username already exists."""
+
+
+class SupabaseInsertError(Exception):
+    """Raised when Supabase insert operation fails."""
+
+
 class SupabaseService:
     """Wrapper for Supabase client plus common database operations."""
 
@@ -20,9 +32,8 @@ class SupabaseService:
     def get_client(self) -> Client:
         """Create and cache a Supabase client instance."""
         if not self.url or not self.key:
-            raise ValueError(
-                "Missing SUPABASE_URL or SUPABASE_KEY. "
-                "Set them in backend/.env before using Supabase."
+            raise SupabaseConfigError(
+                "Supabase is not configured. Missing SUPABASE_URL or SUPABASE_KEY in backend/.env."
             )
 
         if self._client is None:
@@ -65,21 +76,34 @@ class SupabaseService:
     def create_user(self, username: str, password: str) -> dict:
         existing = self.find_user_by_username(username)
         if existing:
-            raise ValueError("Username already exists.")
+            raise DuplicateUsernameError("Username already exists.")
 
         client = self.get_client()
         password_hash = self.hash_password(password)
-        result = (
-            client.table("users")
-            .insert({"username": username, "password_hash": password_hash})
-            .execute()
-        )
-        data = result.data or []
-        if not data:
-            raise ValueError("Failed to create user.")
 
-        created = data[0]
-        return {"user_id": created["id"], "username": created["username"]}
+        try:
+            result = (
+                client.table("users")
+                .insert({"username": username, "password_hash": password_hash})
+                .execute()
+            )
+            data = result.data or []
+            if not data:
+                print("[SupabaseService.create_user] Insert returned no rows.")
+                raise SupabaseInsertError("Supabase insert returned no rows.")
+
+            created = data[0]
+            return {"user_id": created["id"], "username": created["username"]}
+        except DuplicateUsernameError:
+            raise
+        except SupabaseConfigError:
+            raise
+        except Exception as exc:
+            # Safe debug log: print exception type + message only.
+            print(
+                f"[SupabaseService.create_user] Insert failed: {type(exc).__name__}: {exc}"
+            )
+            raise SupabaseInsertError("Failed to insert user into Supabase.")
 
     def verify_login(self, username: str, password: str) -> Optional[dict]:
         user = self.find_user_by_username(username)
