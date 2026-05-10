@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipe Detail - Pantry Recipe Agent</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <p><a href="recipes.html">← Back to Recipes</a></p>
+    <h1 id="recipe-title">Recipe</h1>
+    <p id="detail-message"></p>
+
+    <section id="recipe-content" style="display:none;">
+      <p><strong>Servings:</strong> <span id="recipe-servings"></span></p>
+
+      <h2>Ingredients</h2>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Amount</th><th>Unit</th></tr>
+        </thead>
+        <tbody id="ingredients-body"></tbody>
+      </table>
+
+      <h2>Instructions</h2>
+      <ol id="instructions-list"></ol>
+
+      <h2>Nutrition Totals</h2>
+      <ul>
+        <li>Calories: <span id="nutrition-calories"></span></li>
+        <li>Protein (g): <span id="nutrition-protein"></span></li>
+        <li>Carbs (g): <span id="nutrition-carbs"></span></li>
+        <li>Fat (g): <span id="nutrition-fat"></span></li>
+      </ul>
+
+      <div id="missing-section" style="display:none;">
+        <h2>Missing Ingredients</h2>
+        <ul id="missing-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/recipe_detail.js"></script>
+</body>
+</html>
