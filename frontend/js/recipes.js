@@ -1,3 +1,26 @@
+let isGenerating = false;
+
+function setGenerateStatus(text, loading = false) {
+  const statusEl = document.getElementById("generate-status");
+  if (!statusEl) return;
+
+  if (!text) {
+    statusEl.innerHTML = "";
+    return;
+  }
+
+  statusEl.innerHTML = loading
+    ? `<span class="spinner"></span><span>${text}</span>`
+    : `<span>${text}</span>`;
+}
+
+function setGenerateButtonState(isLoading) {
+  const button = document.getElementById("generate-btn");
+  if (!button) return;
+  button.disabled = isLoading;
+  button.textContent = isLoading ? "Generating..." : "Generate Recipe";
+}
+
 function renderGeneratedRecipe(recipe) {
   const container = document.getElementById("generated-recipe");
   const total = recipe.nutrition?.total || {};
@@ -67,8 +90,15 @@ async function deleteRecipe(recipeId) {
 
 async function handleGenerate(event) {
   event.preventDefault();
+  if (isGenerating) return;
+
+  isGenerating = true;
+  setGenerateButtonState(true);
+  setGenerateStatus("Generating recipe...", true);
+
   const user = getCurrentUser();
   const messageEl = document.getElementById("message");
+  messageEl.textContent = "";
 
   const payload = {
     meal_type: document.getElementById("meal_type").value,
@@ -78,12 +108,21 @@ async function handleGenerate(event) {
   };
 
   try {
+    setGenerateStatus("Contacting AI...", true);
     const response = await apiPost(`/api/users/${user.user_id}/recipes/generate`, payload);
+
+    setGenerateStatus("Calculating nutrition...", true);
     renderGeneratedRecipe(response.recipe);
-    messageEl.textContent = "Recipe generated and saved.";
     await loadSavedRecipes(user.user_id);
+
+    setGenerateStatus("Recipe generated and saved.", false);
+    messageEl.textContent = "Recipe generated and saved.";
   } catch (error) {
+    setGenerateStatus("Generation failed.", false);
     messageEl.textContent = error.message;
+  } finally {
+    isGenerating = false;
+    setGenerateButtonState(false);
   }
 }
 

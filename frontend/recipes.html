@@ -11,7 +11,7 @@
     <h1>Recipes</h1>
     <p id="user-info"></p>
 
-    <h2>Generate Recipe (Mock Mode)</h2>
+    <h2>Generate Recipe</h2>
     <form id="generate-form">
       <label>Meal Type
         <select id="meal_type">
@@ -33,7 +33,9 @@
       <label>Message
         <input id="message_input" type="text" placeholder="I want something easy and filling." />
       </label>
-      <button type="submit">Generate Recipe</button>
+      <button id="generate-btn" type="submit">Generate Recipe</button>
+      <p class="small-note">This can take a few seconds.</p>
+      <div id="generate-status" class="status-box" aria-live="polite"></div>
     </form>
 
     <p id="message"></p>
