@@ -27,10 +27,18 @@ function renderSavedRecipes(recipes) {
         <h3>${recipe.title}</h3>
         <p>Servings: ${recipe.servings}</p>
         <p>Calories: ${total.calories || 0}, Protein: ${total.protein_g || 0}g, Carbs: ${total.carbs_g || 0}g, Fat: ${total.fat_g || 0}g</p>
+        <button data-open-id="${recipe.id}">View Recipe</button>
         <button data-delete-id="${recipe.id}">Delete</button>
       </div>
     `;
   }).join("");
+
+  container.querySelectorAll("button[data-open-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const recipeId = button.getAttribute("data-open-id");
+      window.location.href = `recipe_detail.html?recipe_id=${recipeId}`;
+    });
+  });
 
   container.querySelectorAll("button[data-delete-id]").forEach((button) => {
     button.addEventListener("click", async () => {
