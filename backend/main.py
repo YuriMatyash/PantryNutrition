@@ -15,6 +15,7 @@ from agents.pantry_agent import PantryAgent
 from agents.recipe_generator_agent import RecipeGeneratorAgent
 from agents.validation_agent import ValidationAgent
 from models.schemas import LoginRequest, PantryUpdateRequest, RecipeGenerateRequest, RegisterRequest
+from services.openai_service import OpenAIConfigError, OpenAIJSONError
 from services.supabase_service import (
     DuplicateUsernameError,
     SupabaseConfigError,
@@ -130,8 +131,8 @@ def generate_recipe(user_id: str, payload: RecipeGenerateRequest) -> dict:
     if not supabase_service.user_exists(user_id):
         raise HTTPException(status_code=404, detail={"error": "User does not exist."})
 
-    if os.getenv("USE_MOCK_OPENAI", "false").lower() != "true" or os.getenv("USE_MOCK_USDA", "false").lower() != "true":
-        raise HTTPException(status_code=400, detail={"error": "Mock mode is required for this phase."})
+    if os.getenv("USE_MOCK_USDA", "false").lower() != "true":
+        raise HTTPException(status_code=400, detail={"error": "USE_MOCK_USDA must be true in this phase."})
 
     pantry_items = supabase_service.get_pantry(user_id)
     cleaned_pantry = pantry_agent.clean_pantry_items(pantry_items)
@@ -139,13 +140,21 @@ def generate_recipe(user_id: str, payload: RecipeGenerateRequest) -> dict:
     conversation_id = conversation_agent.create_conversation(user_id=user_id)
     conversation_agent.add_message(conversation_id, "user", payload.message)
 
-    recipe = recipe_generator_agent.generate_recipe(
-        pantry_items=cleaned_pantry,
-        meal_type=payload.meal_type,
-        preference=payload.preference,
-        use_only_pantry=payload.use_only_pantry,
-        user_message=payload.message,
-    )
+    try:
+        recipe = recipe_generator_agent.generate_recipe(
+            pantry_items=cleaned_pantry,
+            meal_type=payload.meal_type,
+            preference=payload.preference,
+            use_only_pantry=payload.use_only_pantry,
+            user_message=payload.message,
+        )
+    except OpenAIConfigError as exc:
+        raise HTTPException(status_code=500, detail={"error": str(exc)})
+    except OpenAIJSONError as exc:
+        raise HTTPException(status_code=502, detail={"error": str(exc)})
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"error": f"Recipe generation failed: {exc}"})
+
     recipe = validation_agent.validate_recipe(recipe)
     ingredients = ingredient_extractor_agent.extract_ingredients(recipe)
     nutrition_items = nutrition_lookup_agent.lookup_ingredients(ingredients)
