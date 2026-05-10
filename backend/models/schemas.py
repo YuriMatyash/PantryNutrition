@@ -21,3 +21,10 @@ class PantryItem(BaseModel):
 
 class PantryUpdateRequest(BaseModel):
     items: list[PantryItem]
+
+
+class RecipeGenerateRequest(BaseModel):
+    meal_type: str
+    preference: str
+    use_only_pantry: bool
+    message: str = ""
