@@ -9,19 +9,31 @@
 <body>
   <div id="top-nav"></div>
   <main class="container">
-    <h1>Your Pantry</h1>
-    <p id="user-info"></p>
-    <p class="small-note">Add ingredients using only g, ml, or unit.</p>
-
-    <div id="pantry-rows"></div>
-    <p id="pantry-empty" class="empty-state" style="display:none;">No pantry items yet. Add your first ingredient row.</p>
-
-    <div class="button-row">
-      <button id="add-row-btn" type="button">Add Row</button>
-      <button id="save-pantry-btn" type="button">Save Pantry</button>
-      <a class="button-link" href="generate.html">Go to Generate</a>
-      <a class="button-link" href="recipes.html">Go to Recipes</a>
+    <div class="app-header">
+      <div>
+        <h1>Your Pantry</h1>
+        <p id="user-info" class="small-note"></p>
+      </div>
+      <div class="button-row">
+        <a class="button-link secondary" href="recipes.html">Go to Recipes</a>
+        <a class="button-link" href="generate.html">Go to Generate</a>
+      </div>
     </div>
+    <p class="small-note">Add ingredients with only g, ml, and unit.</p>
+
+    <section class="section-card">
+      <h2>Ingredients</h2>
+      <div id="pantry-rows"></div>
+      <div id="pantry-empty" class="empty-state" style="display:none;">
+        <div class="icon-dot">+</div>
+        <p>No pantry items yet.</p>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('add-row-btn').click()">Add first ingredient</button>
+      </div>
+      <div class="button-row" style="margin-top:12px;">
+        <button id="add-row-btn" type="button">Add Row</button>
+        <button id="save-pantry-btn" type="button">Save Pantry</button>
+      </div>
+    </section>
 
     <p id="message"></p>
   </main>

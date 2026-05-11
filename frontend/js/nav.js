@@ -37,7 +37,7 @@ function renderNavbar() {
       <div class="nav-right">
         ${
           user
-            ? `<span class="nav-user">Logged in as: ${user.username}</span><button id="nav-logout-btn" class="nav-logout-btn" type="button">Logout</button>`
+            ? `<span class="nav-user">${user.username}</span><button id="nav-logout-btn" class="nav-logout-btn" type="button">Logout</button>`
             : rightLinks
                 .map(
                   (link) =>
