@@ -11,16 +11,18 @@
   <main class="container">
     <h1>Your Pantry</h1>
     <p id="user-info"></p>
-    <p class="small-note">Add ingredients using only g, ml, or unit.</p>
+    <p class="small-note">Use only g, ml, and unit so recipe and nutrition agents stay consistent.</p>
 
-    <div id="pantry-rows"></div>
-    <p id="pantry-empty" class="empty-state" style="display:none;">No pantry items yet. Add your first ingredient row.</p>
+    <section class="section-card">
+      <div id="pantry-rows"></div>
+      <p id="pantry-empty" class="empty-state" style="display:none;">No pantry items yet. Add your first ingredient row.</p>
+    </section>
 
     <div class="button-row">
       <button id="add-row-btn" type="button">Add Row</button>
       <button id="save-pantry-btn" type="button">Save Pantry</button>
-      <a class="button-link" href="generate.html">Go to Generate</a>
-      <a class="button-link" href="recipes.html">Go to Recipes</a>
+      <a class="button-link secondary" href="generate.html">Generate Recipe</a>
+      <a class="button-link secondary" href="recipes.html">View Recipes</a>
     </div>
 
     <p id="message"></p>
