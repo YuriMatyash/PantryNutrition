@@ -16,6 +16,7 @@ from agents.recipe_generator_agent import RecipeGeneratorAgent
 from agents.validation_agent import ValidationAgent
 from models.schemas import LoginRequest, PantryUpdateRequest, RecipeGenerateRequest, RegisterRequest
 from services.openai_service import OpenAIConfigError, OpenAIJSONError
+from services.usda_service import USDAConfigError, USDAServiceError
 from services.supabase_service import (
     DuplicateUsernameError,
     SupabaseConfigError,
@@ -131,9 +132,6 @@ def generate_recipe(user_id: str, payload: RecipeGenerateRequest) -> dict:
     if not supabase_service.user_exists(user_id):
         raise HTTPException(status_code=404, detail={"error": "User does not exist."})
 
-    if os.getenv("USE_MOCK_USDA", "false").lower() != "true":
-        raise HTTPException(status_code=400, detail={"error": "USE_MOCK_USDA must be true in this phase."})
-
     pantry_items = supabase_service.get_pantry(user_id)
     cleaned_pantry = pantry_agent.clean_pantry_items(pantry_items)
 
@@ -157,8 +155,13 @@ def generate_recipe(user_id: str, payload: RecipeGenerateRequest) -> dict:
 
     recipe = validation_agent.validate_recipe(recipe)
     ingredients = ingredient_extractor_agent.extract_ingredients(recipe)
-    nutrition_items = nutrition_lookup_agent.lookup_ingredients(ingredients)
-    nutrition = nutrition_calculator_agent.calculate_total_nutrition(nutrition_items)
+    try:
+        nutrition_items = nutrition_lookup_agent.lookup_ingredients(ingredients)
+        nutrition = nutrition_calculator_agent.calculate_total_nutrition(nutrition_items)
+    except USDAConfigError as exc:
+        raise HTTPException(status_code=500, detail={"error": str(exc)})
+    except USDAServiceError as exc:
+        raise HTTPException(status_code=503, detail={"error": f"USDA service error: {exc}"})
 
     recipe_to_save = {
         "user_id": user_id,

@@ -2,13 +2,17 @@
 
 
 class NutritionCalculatorAgent:
-    def _estimate_grams(self, amount: float, unit: str) -> float:
+    def _estimate_grams(self, amount: float, unit: str, ingredient_name: str = "") -> float:
         if unit == "g":
             return amount
         if unit == "ml":
-            return amount  # simple 1 ml ~= 1 g for mock mode
+            # MVP assumption: liquids are close to water unless clearly oil/fat.
+            oil_keywords = ["oil", "butter", "ghee"]
+            if any(word in ingredient_name.lower() for word in oil_keywords):
+                return amount * 0.92
+            return amount
         if unit == "unit":
-            return amount * 50  # simple assumption for unit ingredients like eggs
+            return amount * 50  # 1 egg ~= 50 g simple assumption
         return amount
 
     def calculate_total_nutrition(self, nutrition_items: list[dict]) -> dict:
@@ -17,19 +21,27 @@ class NutritionCalculatorAgent:
         warnings = []
 
         for item in nutrition_items:
-            grams = self._estimate_grams(float(item["amount"]), item["unit"])
+            per_100g = item.get("per_100g", {})
+            if not per_100g:
+                warnings.append(f"Missing nutrition data for '{item['name']}'.")
+                continue
+
+            grams = self._estimate_grams(float(item["amount"]), item["unit"], item["name"])
             factor = grams / 100.0
-            per_100g = item["per_100g"]
 
             ing = {
                 "name": item["name"],
-                "matched_usda_food": item["matched_usda_food"],
+                "matched_usda_food": item.get("matched_usda_food", item["name"]),
+                "usda_food_id": item.get("usda_food_id"),
                 "amount": item["amount"],
                 "unit": item["unit"],
-                "calories": round(per_100g["calories"] * factor, 2),
-                "protein_g": round(per_100g["protein_g"] * factor, 2),
-                "carbs_g": round(per_100g["carbs_g"] * factor, 2),
-                "fat_g": round(per_100g["fat_g"] * factor, 2),
+                "calories": round(float(per_100g.get("calories", 0)) * factor, 2),
+                "protein_g": round(float(per_100g.get("protein_g", 0)) * factor, 2),
+                "carbs_g": round(float(per_100g.get("carbs_g", 0)) * factor, 2),
+                "fat_g": round(float(per_100g.get("fat_g", 0)) * factor, 2),
+                "fiber_g": round(float(per_100g.get("fiber_g", 0)) * factor, 2),
+                "sugar_g": round(float(per_100g.get("sugar_g", 0)) * factor, 2),
+                "sodium_mg": round(float(per_100g.get("sodium_mg", 0)) * factor, 2),
             }
             ingredients.append(ing)
 

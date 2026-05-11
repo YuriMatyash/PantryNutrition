@@ -29,6 +29,23 @@ function renderRecipeDetail(recipe) {
   document.getElementById("nutrition-carbs").textContent = totals.carbs_g ?? 0;
   document.getElementById("nutrition-fat").textContent = totals.fat_g ?? 0;
 
+  const warnings = recipe.nutrition?.warnings || [];
+  const warningSection = document.getElementById("nutrition-warning-section");
+  const warningList = document.getElementById("nutrition-warning-list");
+  if (warningSection && warningList) {
+    warningList.innerHTML = "";
+    if (warnings.length > 0) {
+      warningSection.style.display = "block";
+      warnings.forEach((warning) => {
+        const li = document.createElement("li");
+        li.textContent = warning;
+        warningList.appendChild(li);
+      });
+    } else {
+      warningSection.style.display = "none";
+    }
+  }
+
   const missing = recipe.missing_ingredients || [];
   const missingSection = document.getElementById("missing-section");
   const missingList = document.getElementById("missing-list");
