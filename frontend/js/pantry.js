@@ -73,10 +73,14 @@ async function loadPantryForUser(userId) {
     const rowsContainer = document.getElementById("pantry-rows");
     rowsContainer.innerHTML = "";
 
+    const empty = document.getElementById("pantry-empty");
     if (items.length === 0) {
+      if (empty) empty.style.display = "block";
       addPantryRow();
       return;
     }
+
+    if (empty) empty.style.display = "none";
 
     items.forEach((item) => addPantryRow(item));
   } catch (error) {
@@ -100,8 +104,6 @@ async function savePantryForUser(userId) {
 (function initPantryPage() {
   const addRowBtn = document.getElementById("add-row-btn");
   const saveBtn = document.getElementById("save-pantry-btn");
-  const logoutBtn = document.getElementById("logout-btn");
-
   // Not on pantry page.
   if (!addRowBtn || !saveBtn) return;
 
@@ -112,7 +114,6 @@ async function savePantryForUser(userId) {
 
   addRowBtn.addEventListener("click", () => addPantryRow());
   saveBtn.addEventListener("click", () => savePantryForUser(user.user_id));
-  logoutBtn.addEventListener("click", logout);
 
   loadPantryForUser(user.user_id);
 })();

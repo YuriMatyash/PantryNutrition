@@ -1,57 +1,23 @@
-let isGenerating = false;
-
-function setGenerateStatus(text, loading = false) {
-  const statusEl = document.getElementById("generate-status");
-  if (!statusEl) return;
-
-  if (!text) {
-    statusEl.innerHTML = "";
-    return;
-  }
-
-  statusEl.innerHTML = loading
-    ? `<span class="spinner"></span><span>${text}</span>`
-    : `<span>${text}</span>`;
-}
-
-function setGenerateButtonState(isLoading) {
-  const button = document.getElementById("generate-btn");
-  if (!button) return;
-  button.disabled = isLoading;
-  button.textContent = isLoading ? "Generating..." : "Generate Recipe";
-}
-
-function renderGeneratedRecipe(recipe) {
-  const container = document.getElementById("generated-recipe");
-  const total = recipe.nutrition?.total || {};
-  const ingredients = (recipe.ingredients || []).map((i) => `<li>${i.name}: ${i.amount} ${i.unit}</li>`).join("");
-  const instructions = (recipe.instructions || []).map((s) => `<li>${s}</li>`).join("");
-
-  container.innerHTML = `
-    <h3>${recipe.title}</h3>
-    <p><strong>Servings:</strong> ${recipe.servings}</p>
-    <p><strong>Calories:</strong> ${total.calories || 0} | <strong>Protein:</strong> ${total.protein_g || 0}g | <strong>Carbs:</strong> ${total.carbs_g || 0}g | <strong>Fat:</strong> ${total.fat_g || 0}g</p>
-    <h4>Ingredients</h4><ul>${ingredients}</ul>
-    <h4>Instructions</h4><ol>${instructions}</ol>
-  `;
-}
-
 function renderSavedRecipes(recipes) {
   const container = document.getElementById("saved-recipes");
   if (!recipes.length) {
-    container.innerHTML = "<p>No saved recipes yet.</p>";
+    container.innerHTML = '<div class="empty-state">No saved recipes yet. <a href="generate.html">Generate your first recipe</a>.</div>';
     return;
   }
 
   container.innerHTML = recipes.map((recipe) => {
     const total = recipe.nutrition?.total || {};
+    const tags = (recipe.tags || []).map((tag) => `<span class="tag">${tag}</span>`).join(" ");
     return `
-      <div class="recipe-card">
+      <div class="card recipe-card">
         <h3>${recipe.title}</h3>
+        <p>${tags}</p>
         <p>Servings: ${recipe.servings}</p>
-        <p>Calories: ${total.calories || 0}, Protein: ${total.protein_g || 0}g, Carbs: ${total.carbs_g || 0}g, Fat: ${total.fat_g || 0}g</p>
-        <button data-open-id="${recipe.id}">View Recipe</button>
-        <button data-delete-id="${recipe.id}">Delete</button>
+        <p>Calories: ${total.calories || 0} | Protein: ${total.protein_g || 0}g | Carbs: ${total.carbs_g || 0}g | Fat: ${total.fat_g || 0}g</p>
+        <div class="button-row">
+          <button data-open-id="${recipe.id}">View Recipe</button>
+          <button data-delete-id="${recipe.id}" class="danger">Delete</button>
+        </div>
       </div>
     `;
   }).join("");
@@ -66,6 +32,7 @@ function renderSavedRecipes(recipes) {
   container.querySelectorAll("button[data-delete-id]").forEach((button) => {
     button.addEventListener("click", async () => {
       const recipeId = button.getAttribute("data-delete-id");
+      if (!window.confirm("Delete this recipe?")) return;
       await deleteRecipe(recipeId);
     });
   });
@@ -88,52 +55,12 @@ async function deleteRecipe(recipeId) {
   }
 }
 
-async function handleGenerate(event) {
-  event.preventDefault();
-  if (isGenerating) return;
-
-  isGenerating = true;
-  setGenerateButtonState(true);
-  setGenerateStatus("Generating recipe...", true);
-
-  const user = getCurrentUser();
-  const messageEl = document.getElementById("message");
-  messageEl.textContent = "";
-
-  const payload = {
-    meal_type: document.getElementById("meal_type").value,
-    preference: document.getElementById("preference").value,
-    use_only_pantry: document.getElementById("use_only_pantry").value === "true",
-    message: document.getElementById("message_input").value,
-  };
-
-  try {
-    setGenerateStatus("Contacting AI...", true);
-    const response = await apiPost(`/api/users/${user.user_id}/recipes/generate`, payload);
-
-    setGenerateStatus("Calculating nutrition...", true);
-    renderGeneratedRecipe(response.recipe);
-    await loadSavedRecipes(user.user_id);
-
-    setGenerateStatus("Recipe generated and saved.", false);
-    messageEl.textContent = "Recipe generated and saved.";
-  } catch (error) {
-    setGenerateStatus("Generation failed.", false);
-    messageEl.textContent = error.message;
-  } finally {
-    isGenerating = false;
-    setGenerateButtonState(false);
-  }
-}
-
 (function initRecipesPage() {
-  const form = document.getElementById("generate-form");
-  if (!form) return;
+  const container = document.getElementById("saved-recipes");
+  if (!container) return;
 
   const user = requireLogin();
   if (!user) return;
 
-  document.getElementById("user-info").textContent = `Logged in as: ${user.username}`;
-  form.addEventListener("submit", handleGenerate);
   loadSavedRecipes(user.user_id);
 })();
