@@ -5,32 +5,46 @@ function renderNavbar() {
   const user = getCurrentUser ? getCurrentUser() : null;
   const page = (window.location.pathname.split("/").pop() || "index.html").toLowerCase();
 
-  const loggedInLinks = [
-    { href: "pantry.html", label: "Pantry" },
-    { href: "generate.html", label: "Generate" },
-    { href: "recipes.html", label: "Recipes" },
-  ];
+  const leftLinks = user
+    ? [
+        { href: "index.html", label: "Home" },
+        { href: "pantry.html", label: "Pantry" },
+        { href: "generate.html", label: "Generate" },
+        { href: "recipes.html", label: "Recipes" },
+      ]
+    : [{ href: "index.html", label: "Home" }];
 
-  const loggedOutLinks = [
-    { href: "login.html", label: "Login" },
-    { href: "register.html", label: "Register" },
-  ];
-
-  const links = user ? loggedInLinks : loggedOutLinks;
+  const rightLinks = user
+    ? []
+    : [
+        { href: "login.html", label: "Login" },
+        { href: "register.html", label: "Register" },
+      ];
 
   mount.innerHTML = `
-    <nav class="navbar">
-      <a class="brand" href="${user ? "pantry.html" : "index.html"}">Pantry Recipe Agent</a>
-      <div class="nav-links">
-        ${links
-          .map(
-            (link) =>
-              `<a class="nav-link ${page === link.href ? "active" : ""}" href="${link.href}">${link.label}</a>`
-          )
-          .join("")}
+    <nav class="app-navbar">
+      <div class="nav-left">
+        <a class="nav-brand" href="index.html">PantryAI</a>
+        <div class="nav-links">
+          ${leftLinks
+            .map(
+              (link) =>
+                `<a class="nav-link ${page === link.href ? "active" : ""}" href="${link.href}">${link.label}</a>`
+            )
+            .join("")}
+        </div>
       </div>
       <div class="nav-right">
-        ${user ? `<span class="nav-user">${user.username}</span><button id="nav-logout-btn" type="button">Logout</button>` : ""}
+        ${
+          user
+            ? `<span class="nav-user">Logged in as: ${user.username}</span><button id="nav-logout-btn" class="nav-logout-btn" type="button">Logout</button>`
+            : rightLinks
+                .map(
+                  (link) =>
+                    `<a class="nav-link ${page === link.href ? "active" : ""}" href="${link.href}">${link.label}</a>`
+                )
+                .join("")
+        }
       </div>
     </nav>
   `;

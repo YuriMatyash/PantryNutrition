@@ -3,21 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pantry Recipe Agent</title>
+  <title>PantryAI - Home</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <div id="top-nav"></div>
-  <main class="container">
-    <h1>Welcome to Pantry Recipe Agent</h1>
-    <p>Save pantry items, generate recipes, and track nutrition.</p>
-    <div class="button-row">
-      <a class="button-link" href="login.html">Login</a>
-      <a class="button-link" href="register.html">Register</a>
-    </div>
+
+  <main class="page-wrap">
+    <section class="hero-card">
+      <p class="eyebrow">Pantry Recipe Agent</p>
+      <h1>Cook smarter with PantryAI</h1>
+      <p class="hero-subtitle">
+        Save your pantry, generate AI-powered recipes, calculate USDA nutrition,
+        and edit recipes with a simple chatbot flow.
+      </p>
+      <div id="home-cta" class="button-row"></div>
+    </section>
+
+    <section class="feature-grid">
+      <article class="feature-card">
+        <h3>1) Save Pantry Ingredients</h3>
+        <p>Track what you have using clean units: g, ml, and unit.</p>
+      </article>
+      <article class="feature-card">
+        <h3>2) Generate Recipes with AI</h3>
+        <p>Pick meal preferences and generate practical pantry-based meals.</p>
+      </article>
+      <article class="feature-card">
+        <h3>3) USDA Nutrition Lookup</h3>
+        <p>Estimate calories, protein, carbs, and fat for each recipe.</p>
+      </article>
+      <article class="feature-card">
+        <h3>4) Save & Edit Later</h3>
+        <p>Open saved recipes and refine them using chatbot-style requests.</p>
+      </article>
+      <article class="feature-card">
+        <h3>5) Conversation History</h3>
+        <p>User and assistant recipe messages are stored for traceability.</p>
+      </article>
+    </section>
+
+    <section class="flow-card">
+      <h2>App Flow</h2>
+      <p>Pantry → AI recipe generation → USDA nutrition → save recipe → edit with chatbot.</p>
+    </section>
   </main>
+
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/nav.js"></script>
+  <script src="js/index.js"></script>
 </body>
 </html>
