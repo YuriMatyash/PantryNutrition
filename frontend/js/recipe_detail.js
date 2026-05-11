@@ -1,6 +1,20 @@
+let isEditingRecipe = false;
+
 function getRecipeIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("recipe_id");
+}
+
+function setEditStatus(text) {
+  const status = document.getElementById("edit-status");
+  if (status) status.textContent = text || "";
+}
+
+function setEditButtonLoading(isLoading) {
+  const button = document.getElementById("edit-recipe-btn");
+  if (!button) return;
+  button.disabled = isLoading;
+  button.textContent = isLoading ? "Editing..." : "Send Edit Request";
 }
 
 function renderRecipeDetail(recipe) {
@@ -54,13 +68,11 @@ function renderRecipeDetail(recipe) {
     missingSection.style.display = "block";
     missing.forEach((item) => {
       const li = document.createElement("li");
-      if (typeof item === "string") {
-        li.textContent = item;
-      } else {
-        li.textContent = `${item.name}: ${item.amount} ${item.unit}`;
-      }
+      li.textContent = typeof item === "string" ? item : `${item.name}: ${item.amount} ${item.unit}`;
       missingList.appendChild(li);
     });
+  } else {
+    missingSection.style.display = "none";
   }
 
   document.getElementById("recipe-content").style.display = "block";
@@ -86,4 +98,45 @@ async function loadRecipeDetail() {
   }
 }
 
-loadRecipeDetail();
+async function handleRecipeEdit() {
+  if (isEditingRecipe) return;
+
+  const user = requireLogin();
+  if (!user) return;
+
+  const recipeId = getRecipeIdFromUrl();
+  const input = document.getElementById("edit-message");
+  const message = input.value.trim();
+
+  if (!message) {
+    setEditStatus("Please enter an edit request.");
+    return;
+  }
+
+  isEditingRecipe = true;
+  setEditButtonLoading(true);
+  setEditStatus("Editing recipe...");
+
+  try {
+    const response = await apiPost(`/api/recipes/${recipeId}/edit`, {
+      user_id: user.user_id,
+      message,
+    });
+    renderRecipeDetail(response.recipe);
+    setEditStatus("Recipe updated successfully.");
+    input.value = "";
+  } catch (error) {
+    setEditStatus(`Edit failed: ${error.message}`);
+  } finally {
+    isEditingRecipe = false;
+    setEditButtonLoading(false);
+  }
+}
+
+(function initRecipeDetailPage() {
+  loadRecipeDetail();
+  const editBtn = document.getElementById("edit-recipe-btn");
+  if (editBtn) {
+    editBtn.addEventListener("click", handleRecipeEdit);
+  }
+})();

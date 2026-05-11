@@ -28,3 +28,8 @@ class RecipeGenerateRequest(BaseModel):
     preference: str
     use_only_pantry: bool
     message: str = ""
+
+
+class RecipeEditRequest(BaseModel):
+    user_id: str
+    message: str = Field(..., min_length=1)

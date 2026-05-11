@@ -134,6 +134,41 @@ class SupabaseService:
         client.table("recipes").delete().eq("id", recipe_id).eq("user_id", user_id).execute()
         return True
 
+
+    def update_recipe(self, recipe_id: str, user_id: str, updates: dict) -> dict:
+        client = self.get_client()
+        result = (
+            client.table("recipes")
+            .update(updates)
+            .eq("id", recipe_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        data = result.data or []
+        if not data:
+            raise SupabaseInsertError("Failed to update recipe.")
+        return data[0]
+
+    def get_conversation_by_recipe(self, user_id: str, recipe_id: str) -> Optional[dict]:
+        client = self.get_client()
+        result = (
+            client.table("conversations")
+            .select("id, messages")
+            .eq("user_id", user_id)
+            .eq("recipe_id", recipe_id)
+            .order("updated_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        data = result.data or []
+        return data[0] if data else None
+
+    def get_or_create_recipe_conversation(self, user_id: str, recipe_id: str) -> str:
+        conversation = self.get_conversation_by_recipe(user_id, recipe_id)
+        if conversation:
+            return conversation["id"]
+        return self.create_conversation(user_id=user_id, recipe_id=recipe_id)
+
     def create_conversation(self, user_id: str, recipe_id: str | None = None) -> str:
         client = self.get_client()
         payload = {"user_id": user_id, "recipe_id": recipe_id, "messages": []}

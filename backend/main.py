@@ -13,8 +13,9 @@ from agents.nutrition_calculator_agent import NutritionCalculatorAgent
 from agents.nutrition_lookup_agent import NutritionLookupAgent
 from agents.pantry_agent import PantryAgent
 from agents.recipe_generator_agent import RecipeGeneratorAgent
+from agents.recipe_editor_agent import RecipeEditorAgent
 from agents.validation_agent import ValidationAgent
-from models.schemas import LoginRequest, PantryUpdateRequest, RecipeGenerateRequest, RegisterRequest
+from models.schemas import LoginRequest, PantryUpdateRequest, RecipeEditRequest, RecipeGenerateRequest, RegisterRequest
 from services.openai_service import OpenAIConfigError, OpenAIJSONError
 from services.usda_service import USDAConfigError, USDAServiceError
 from services.supabase_service import (
@@ -40,6 +41,7 @@ app.add_middleware(
 supabase_service = SupabaseService()
 pantry_agent = PantryAgent()
 recipe_generator_agent = RecipeGeneratorAgent()
+recipe_editor_agent = RecipeEditorAgent()
 ingredient_extractor_agent = IngredientExtractorAgent()
 nutrition_lookup_agent = NutritionLookupAgent()
 nutrition_calculator_agent = NutritionCalculatorAgent()
@@ -179,4 +181,60 @@ def generate_recipe(user_id: str, payload: RecipeGenerateRequest) -> dict:
     conversation_agent.add_message(conversation_id, "assistant", f"Created recipe: {saved_recipe['title']}")
 
     saved_recipe["missing_ingredients"] = recipe.get("missing_ingredients", [])
+    return {"recipe": saved_recipe, "conversation_id": conversation_id}
+
+
+@app.post("/api/recipes/{recipe_id}/edit")
+def edit_recipe(recipe_id: str, payload: RecipeEditRequest) -> dict:
+    user_id = payload.user_id
+    if not supabase_service.user_exists(user_id):
+        raise HTTPException(status_code=404, detail={"error": "User does not exist."})
+
+    recipe = supabase_service.get_recipe_by_id(recipe_id, user_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail={"error": "Recipe not found."})
+
+    conversation_id = supabase_service.get_or_create_recipe_conversation(user_id, recipe_id)
+    conversation_agent.add_message(conversation_id, "user", payload.message)
+
+    current_recipe = {
+        "title": recipe.get("title", ""),
+        "ingredients": recipe.get("ingredients", []),
+        "instructions": recipe.get("instructions", []),
+        "servings": recipe.get("servings", 1),
+        "tags": recipe.get("tags", []),
+        "missing_ingredients": recipe.get("missing_ingredients", []),
+    }
+
+    try:
+        updated_recipe = recipe_editor_agent.edit_recipe(current_recipe, payload.message)
+    except OpenAIConfigError as exc:
+        raise HTTPException(status_code=500, detail={"error": str(exc)})
+    except OpenAIJSONError as exc:
+        raise HTTPException(status_code=502, detail={"error": str(exc)})
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"error": f"Recipe edit failed: {exc}"})
+
+    updated_recipe = validation_agent.validate_recipe(updated_recipe)
+    ingredients = ingredient_extractor_agent.extract_ingredients(updated_recipe)
+    try:
+        nutrition_items = nutrition_lookup_agent.lookup_ingredients(ingredients)
+        nutrition = nutrition_calculator_agent.calculate_total_nutrition(nutrition_items)
+    except USDAConfigError as exc:
+        raise HTTPException(status_code=500, detail={"error": str(exc)})
+    except USDAServiceError as exc:
+        raise HTTPException(status_code=503, detail={"error": f"USDA service error: {exc}"})
+
+    update_payload = {
+        "title": updated_recipe["title"],
+        "ingredients": updated_recipe["ingredients"],
+        "instructions": updated_recipe["instructions"],
+        "servings": updated_recipe["servings"],
+        "tags": updated_recipe.get("tags", []),
+        "nutrition": nutrition,
+    }
+    saved_recipe = supabase_service.update_recipe(recipe_id, user_id, update_payload)
+    saved_recipe["missing_ingredients"] = updated_recipe.get("missing_ingredients", [])
+
+    conversation_agent.add_message(conversation_id, "assistant", f"Updated recipe: {saved_recipe['title']}")
     return {"recipe": saved_recipe, "conversation_id": conversation_id}
