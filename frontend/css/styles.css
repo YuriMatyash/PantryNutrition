@@ -1,0 +1,108 @@
+:root {
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #dc2626;
+  --border: #e2e8f0;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, Segoe UI, Roboto, Arial, sans-serif; }
+
+.app-navbar {
+  width: 100%;
+  background: #0b1220;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 22px;
+  gap: 14px;
+}
+.nav-left, .nav-right { display: flex; align-items: center; gap: 14px; }
+.nav-brand {
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #fff;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
+.nav-links { display: flex; gap: 8px; }
+.nav-link {
+  color: #dbe4ff;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+.nav-user { color: #cbd5e1; font-size: 13px; }
+.nav-logout-btn { background: #ef4444; border: none; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+
+.page-wrap, .container { max-width: 1060px; margin: 24px auto; padding: 0 16px; }
+.container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.hero-card, .flow-card, .feature-card, .card, .section-card, .auth-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.hero-card { padding: 30px; margin-bottom: 18px; }
+.eyebrow { color: var(--primary); font-weight: 700; margin: 0 0 8px; }
+.hero-subtitle { color: var(--muted); max-width: 700px; }
+.feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.feature-card { padding: 16px; }
+.flow-card { margin-top: 16px; padding: 20px; }
+
+form { display: grid; gap: 12px; }
+label { display: grid; gap: 6px; }
+input, select, textarea, button { border-radius: 10px; padding: 10px; border: 1px solid #cbd5e1; font-size: 14px; }
+button { background: var(--primary); color: #fff; border: none; cursor: pointer; }
+button:hover { background: var(--primary-hover); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button.danger { background: var(--danger); }
+.button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.button-link { text-decoration: none; background: var(--primary); color: #fff; padding: 10px 12px; border-radius: 10px; display: inline-block; }
+.button-link.secondary { background: #334155; }
+
+.recipe-card { padding: 14px; }
+#saved-recipes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
+.tag { display: inline-block; font-size: 12px; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 2px 8px; margin: 0 4px 4px 0; }
+.empty-state { text-align: center; padding: 20px; border: 1px dashed #94a3b8; border-radius: 12px; color: var(--muted); }
+
+.pantry-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
+.status-box { min-height: 26px; border: 1px solid var(--border); border-radius: 10px; padding: 8px; display: flex; align-items: center; gap: 8px; background: #f8fafc; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd5e1; border-top-color: var(--primary); animation: spin 0.8s linear infinite; }
+.small-note { color: var(--muted); }
+
+.nutrition-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.nutrition-card { border: 1px solid #bfdbfe; background: #eff6ff; border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; }
+.section-card { padding: 16px; margin-top: 12px; }
+
+.auth-wrap { display: flex; justify-content: center; }
+.auth-card { max-width: 460px; width: 100%; padding: 24px; }
+
+#message, #detail-message, #edit-status { min-height: 20px; color: #1f2937; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 860px) {
+  .feature-grid { grid-template-columns: 1fr; }
+  .app-navbar { flex-direction: column; align-items: stretch; }
+  .nav-left, .nav-right { justify-content: space-between; flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .pantry-row { grid-template-columns: 1fr; }
+  .nutrition-grid { grid-template-columns: 1fr; }
+}
