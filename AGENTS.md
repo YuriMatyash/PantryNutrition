@@ -1535,6 +1535,13 @@ Handle at least:
 
 ---
 
+## Implementation Status Note
+
+Current repo status (as of latest implementation pass):
+- Phases 1-10 are implemented in code (including recipe edit chatbot flow).
+- Keep this AGENTS.md as the product/architecture contract for future iterations.
+- For future work, continue from Phase 11 polish and beyond unless instructed otherwise.
+
 ## Build Order for Codex
 
 Build the project in this order.

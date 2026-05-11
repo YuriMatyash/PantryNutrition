@@ -1,82 +1,259 @@
 # Pantry Recipe Agent Web App
 
-A local-first, host-ready university project web app that helps users save pantry ingredients, generate recipes with AI, edit recipes through a chatbot, and calculate nutrition using USDA FoodData Central.
+A local-first, host-ready university project web app where users can:
+- register/login,
+- save pantry ingredients,
+- generate recipes with OpenAI,
+- recalculate nutrition with USDA FoodData Central,
+- save recipes,
+- edit recipes with a chatbot-style input,
+- save recipe conversations.
 
-## Tech Stack
+---
 
-- Frontend: HTML, CSS, vanilla JavaScript
+## 1) What this project does
+
+This app demonstrates an **agent-based backend architecture** in FastAPI.
+Business logic is split into focused agents for pantry cleaning, generation/editing, validation, ingredient extraction, nutrition lookup/calculation, and conversation handling.
+
+The frontend is plain HTML/CSS/JS and talks only to the Python backend.
+Supabase is used for persistence.
+
+---
+
+## 2) Tech stack
+
+- Frontend: HTML, CSS, Vanilla JavaScript
 - Backend: Python + FastAPI
-- Database: Supabase
-- AI API: OpenAI API
-- Nutrition API: USDA FoodData Central API
+- Database: Supabase (PostgreSQL)
+- AI: OpenAI API
+- Nutrition: USDA FoodData Central API
 
-## Local-First, Host-Ready
+---
 
-This project runs locally today and is structured so it can later be deployed with minimal changes:
+## 3) Project structure
 
-- Frontend can be hosted as static files.
-- Backend can be hosted on a Python-compatible platform.
-- Supabase remains the shared database.
-- Environment variables can be moved from local `.env` to hosting platform settings.
+```text
+project-root/
+  frontend/
+    index.html
+    login.html
+    register.html
+    pantry.html
+    recipes.html
+    recipe_detail.html
+    css/styles.css
+    js/
+      config.js
+      api.js
+      auth.js
+      pantry.js
+      recipes.js
+      recipe_detail.js
+      chat.js
 
-## Current Implementation Status (Phases 1-3)
+  backend/
+    main.py
+    requirements.txt
+    .env.example
+    agents/
+    services/
+    models/
+    utils/
 
-Implemented:
+  database/
+    schema.sql
+```
 
-1. Project skeleton and folder structure
-2. Supabase SQL schema file
-3. FastAPI backend foundation with:
-   - CORS setup
-   - `.env` loading via `python-dotenv`
-   - Supabase client initialization service
-   - Health endpoint: `GET /api/health`
+---
 
-Not yet implemented:
+## 4) Required API keys and environment variables
 
-- Auth endpoints
-- Pantry endpoints
-- Recipe generation and editing pipeline
-- OpenAI and USDA integrations
-- Full frontend behavior
+Create `backend/.env` from `backend/.env.example`.
 
-## Setup
+Required variables:
 
-### 1. Create Supabase Tables
+```env
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+USDA_API_KEY=your-usda-api-key-here
+SUPABASE_URL=your-supabase-url-here
+SUPABASE_KEY=your-supabase-key-here
+APP_ENV=local
+USE_MOCK_OPENAI=false
+USE_MOCK_USDA=true
+```
 
-Run SQL from `database/schema.sql` in your Supabase SQL editor.
+> Never commit `backend/.env`.
 
-### 2. Configure Environment Variables
+---
 
-Copy `backend/.env.example` to `backend/.env` and fill your values.
+## 5) Supabase setup
 
-### 3. Install Backend Dependencies
+1. Create a Supabase project.
+2. Open SQL editor in Supabase dashboard.
+3. Run `database/schema.sql`.
+4. Copy project URL and service key into `backend/.env`:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+
+---
+
+## 6) Run backend locally
 
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 4. Run Backend
-
-```bash
-cd backend
 uvicorn main:app --reload
 ```
 
 Backend base URL: `http://127.0.0.1:8000`
-Health check: `http://127.0.0.1:8000/api/health`
+Health check: `GET /api/health`
 
-## Planned Agent Pipeline
+---
 
-Agents are organized in `backend/agents/` and will handle pantry cleaning, recipe generation/editing, ingredient extraction, nutrition lookup/calculation, validation, and conversation persistence.
 
-## Known MVP Limitations (to be documented in detail later)
+## 6b) Windows PowerShell with Mamba
 
-- Simplified login approach for project demo
-- Nutrition matching is approximate
-- Nutrition values are estimates
-- Limited unit conversion support
-- Plain HTML/CSS/JS frontend
-- Local-first architecture with future hosting readiness
+If you are developing on Windows, you can use Mamba/Conda style environments.
+
+```powershell
+mamba create -n pantry_nutrition python=3.11 -y
+mamba activate pantry_nutrition
+cd backend
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+```
+
+Run frontend from another PowerShell terminal:
+
+```powershell
+cd frontend
+python -m http.server 5500
+```
+
+If you use a normal Python venv on Windows instead, activation is:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+---
+
+## 7) Run frontend locally
+
+Use any static server. Example:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+Open in browser:
+- `http://127.0.0.1:5500/register.html`
+- `http://127.0.0.1:5500/login.html`
+
+---
+
+## 8) Mock mode vs real mode
+
+### Full mock mode (fast demo/dev)
+```env
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+### Real OpenAI + Mock USDA (recommended before USDA testing)
+```env
+USE_MOCK_OPENAI=false
+USE_MOCK_USDA=true
+```
+
+### Real OpenAI + Real USDA
+```env
+USE_MOCK_OPENAI=false
+USE_MOCK_USDA=false
+```
+
+---
+
+## 9) Agent pipeline
+
+### Recipe generation flow
+1. Load pantry from Supabase
+2. Clean pantry with `PantryAgent`
+3. Create conversation + save user message
+4. Generate recipe (`RecipeGeneratorAgent`)
+5. Validate recipe (`ValidationAgent`)
+6. Extract ingredients (`IngredientExtractorAgent`)
+7. Lookup nutrition (`NutritionLookupAgent`)
+8. Calculate totals (`NutritionCalculatorAgent`)
+9. Save recipe to Supabase
+10. Save assistant conversation message
+11. Return `{ recipe, conversation_id }`
+
+### Recipe editing flow
+1. Load recipe and verify owner
+2. Load/create recipe conversation
+3. Save user edit message
+4. Edit recipe (`RecipeEditorAgent`)
+5. Validate updated recipe
+6. Extract ingredients
+7. Lookup nutrition again
+8. Recalculate totals
+9. Update recipe in Supabase
+10. Save assistant message
+11. Return updated recipe + conversation_id
+
+---
+
+## 10) Conversations
+
+Conversations are stored in the `conversations` table as JSON messages.
+Each message contains role/content/timestamp.
+Conversations can be linked to a recipe via `recipe_id`.
+
+---
+
+## 11) Known limitations
+
+- Auth is simplified for MVP (no JWT/session hardening).
+- USDA matching can be imperfect (best-effort search).
+- Nutrition values are estimates.
+- Unit system is intentionally restricted to `g`, `ml`, `unit`.
+- Frontend is intentionally simple static HTML/CSS/JS.
+- Production security hardening is not yet implemented.
+
+---
+
+## 12) University demo flow (recommended)
+
+1. Register user
+2. Login
+3. Add pantry items:
+   - egg, 3, unit
+   - rice, 300, g
+   - milk, 500, ml
+4. Save pantry
+5. Generate recipe (e.g., high protein lunch)
+6. Show saved recipe list + detail page
+7. Edit recipe message (e.g., "Make it lower calorie")
+8. Show updated nutrition
+9. Show conversation saved in Supabase
+
+---
+
+## 13) What to commit vs never commit
+
+Commit:
+- source code
+- `database/schema.sql`
+- `backend/.env.example`
+- docs (`README.md`, `AGENTS.md`)
+
+Never commit:
+- `backend/.env`
+- real API keys/tokens/secrets
+- local virtualenv folders
