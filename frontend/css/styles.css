@@ -1,0 +1,46 @@
+body { font-family: Arial, sans-serif; background: #f3f4f6; margin: 0; color: #111827; }
+.container { max-width: 900px; margin: 24px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+.navbar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; padding: 12px 20px; background: #111827; color: #fff; }
+.brand { color: #fff; text-decoration: none; font-weight: 700; }
+.nav-links { display: flex; gap: 8px; }
+.nav-link { color: #d1d5db; text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+.nav-link.active, .nav-link:hover { background: #374151; color: #fff; }
+.nav-right { display: flex; gap: 10px; align-items: center; }
+.nav-user { font-size: 13px; color: #cbd5e1; }
+
+form { display: grid; gap: 12px; }
+label { display: grid; gap: 6px; }
+input, select, textarea, button { padding: 9px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; }
+button { cursor: pointer; background: #2563eb; color: #fff; border: none; }
+button:hover { background: #1d4ed8; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button.danger { background: #dc2626; }
+button.danger:hover { background: #b91c1c; }
+
+.button-row { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.button-link { display: inline-block; padding: 9px 12px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; }
+
+.card, .section-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin-top: 12px; background: #fff; }
+.recipe-card h3 { margin-top: 0; }
+.tag { display: inline-block; background: #eef2ff; color: #3730a3; padding: 2px 8px; border-radius: 999px; margin-right: 6px; font-size: 12px; }
+.empty-state { padding: 16px; background: #f9fafb; border: 1px dashed #9ca3af; border-radius: 10px; color: #4b5563; }
+
+.pantry-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
+
+#message, #detail-message, #edit-status { margin-top: 10px; min-height: 20px; color: #1f2937; }
+.small-note { margin: 0; color: #6b7280; font-size: 13px; }
+.status-box { min-height: 24px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; display: flex; align-items: center; gap: 8px; color: #111827; }
+.spinner { width: 14px; height: 14px; border: 2px solid #d1d5db; border-top-color: #2563eb; border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite; }
+
+.nutrition-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.nutrition-card { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 700px) {
+  .container { margin: 12px; padding: 16px; }
+  .pantry-row { grid-template-columns: 1fr; }
+  .nutrition-grid { grid-template-columns: 1fr; }
+  .navbar { padding: 10px 12px; }
+}
