@@ -2,6 +2,7 @@
 
 import os
 
+from agents.usda_food_match_agent import USDAFoodMatchAgent
 from services.usda_service import USDAConfigError, USDAService, USDAServiceError
 
 
@@ -14,13 +15,19 @@ class NutritionLookupAgent:
 
     def __init__(self) -> None:
         self.usda_service = USDAService()
+        self.food_match_agent = USDAFoodMatchAgent()
+        self.app_env = os.getenv("APP_ENV", "local").lower()
+
+    def _is_local(self) -> bool:
+        return self.app_env == "local"
+
+    def _local_log(self, message: str) -> None:
+        if self._is_local():
+            print(f"[NutritionLookupAgent] {message}")
 
     def _mock_lookup(self, item: dict) -> dict:
         name = item["name"]
-        nutrition = self.MOCK_NUTRITION_PER_100G.get(
-            name,
-            {"calories": 90, "protein_g": 3.0, "carbs_g": 12.0, "fat_g": 2.0},
-        )
+        nutrition = self.MOCK_NUTRITION_PER_100G.get(name, {"calories": 90, "protein_g": 3.0, "carbs_g": 12.0, "fat_g": 2.0})
         return {
             "name": name,
             "matched_usda_food": f"Mock food: {name}",
@@ -28,6 +35,7 @@ class NutritionLookupAgent:
             "amount": item["amount"],
             "unit": item["unit"],
             "per_100g": nutrition,
+            "data_type": "mock",
             "warning": None,
         }
 
@@ -40,34 +48,42 @@ class NutritionLookupAgent:
                 results.append(self._mock_lookup(item))
                 continue
 
+            name = item["name"]
             try:
-                match = self.usda_service.search_best_match(item["name"])
+                foods = self.usda_service.search_foods(name)
+                selection = self.food_match_agent.choose_best_match(name, foods)
+                match = selection.get("match")
+
                 if not match:
                     results.append(
                         {
-                            "name": item["name"],
-                            "matched_usda_food": item["name"],
+                            "name": name,
+                            "matched_usda_food": None,
                             "usda_food_id": None,
                             "amount": item["amount"],
                             "unit": item["unit"],
-                            "per_100g": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0},
-                            "warning": f"No USDA match found for '{item['name']}'.",
+                            "per_100g": None,
+                            "data_type": None,
+                            "warning": selection.get("warning") or f"No reasonable USDA match found for '{name}'.",
                         }
                     )
                     continue
 
-                warning = None
-                if str(match.get("data_type", "")).lower() == "branded":
-                    warning = f"Used branded USDA match for '{item['name']}'."
+                nutrients = self.usda_service.extract_nutrients_from_food(match)
+                warning = selection.get("warning")
+                self._local_log(
+                    f"ingredient='{name}' chosen='{match.get('description', '')}' data_type='{match.get('data_type', '')}' confidence={selection.get('confidence')}"
+                )
 
                 results.append(
                     {
-                        "name": item["name"],
-                        "matched_usda_food": match.get("description", item["name"]),
+                        "name": name,
+                        "matched_usda_food": match.get("description"),
                         "usda_food_id": match.get("fdc_id"),
                         "amount": item["amount"],
                         "unit": item["unit"],
-                        "per_100g": match.get("per_100g", {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}),
+                        "per_100g": nutrients,
+                        "data_type": match.get("data_type"),
                         "warning": warning,
                     }
                 )
@@ -76,13 +92,14 @@ class NutritionLookupAgent:
             except USDAServiceError as exc:
                 results.append(
                     {
-                        "name": item["name"],
-                        "matched_usda_food": item["name"],
+                        "name": name,
+                        "matched_usda_food": None,
                         "usda_food_id": None,
                         "amount": item["amount"],
                         "unit": item["unit"],
-                        "per_100g": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0},
-                        "warning": f"USDA lookup failed for '{item['name']}': {exc}",
+                        "per_100g": None,
+                        "data_type": None,
+                        "warning": f"USDA lookup failed for '{name}': {exc}",
                     }
                 )
 
