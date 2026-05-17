@@ -17,7 +17,7 @@ class USDAService:
     BASE_URL = "https://api.nal.usda.gov/fdc/v1"
     SEARCH_URL = f"{BASE_URL}/foods/search"
     DEFAULT_TIMEOUT_SECONDS = 20
-    DEFAULT_PAGE_SIZE = 10
+    DEFAULT_PAGE_SIZE = 20
 
     def __init__(self) -> None:
         self.api_key = os.getenv("USDA_API_KEY", "")
@@ -43,73 +43,6 @@ class USDAService:
             return "USDA rate limit reached. Try again later."
         return f"USDA request failed with status {status_code}."
 
-    def _extract_nutrients(self, nutrients: list[dict]) -> dict:
-        values = {
-            "calories": 0.0,
-            "protein_g": 0.0,
-            "carbs_g": 0.0,
-            "fat_g": 0.0,
-            "fiber_g": 0.0,
-            "sugar_g": 0.0,
-            "sodium_mg": 0.0,
-        }
-        number_map = {"208": "calories", "203": "protein_g", "205": "carbs_g", "204": "fat_g", "291": "fiber_g", "269": "sugar_g", "307": "sodium_mg"}
-        id_map = {1008: "calories", 1003: "protein_g", 1005: "carbs_g", 1004: "fat_g", 1079: "fiber_g", 2000: "sugar_g", 1093: "sodium_mg"}
-
-        for nutrient in nutrients:
-            raw_value = nutrient.get("value")
-            if raw_value in (None, ""):
-                continue
-            try:
-                value = float(raw_value)
-            except (TypeError, ValueError):
-                continue
-
-            target = number_map.get(str(nutrient.get("nutrientNumber", "")).strip())
-            if target is None:
-                try:
-                    nutrient_id = int(nutrient.get("nutrientId"))
-                except (TypeError, ValueError):
-                    nutrient_id = None
-                if nutrient_id is not None:
-                    target = id_map.get(nutrient_id)
-
-            if target is None:
-                name = str(nutrient.get("nutrientName", "")).strip().lower()
-                if "energy" in name or "calorie" in name:
-                    target = "calories"
-                elif "protein" in name:
-                    target = "protein_g"
-                elif "carbohydrate" in name:
-                    target = "carbs_g"
-                elif "lipid" in name or name == "fat":
-                    target = "fat_g"
-                elif "fiber" in name:
-                    target = "fiber_g"
-                elif "sugar" in name:
-                    target = "sugar_g"
-                elif "sodium" in name:
-                    target = "sodium_mg"
-
-            if target:
-                values[target] = value
-
-        return values
-
-    def extract_nutrients_from_food(self, food: dict) -> dict:
-        return self._extract_nutrients(food.get("food_nutrients", []))
-
-    def _request_get(self, query: str) -> requests.Response:
-        headers = {"Accept": "application/json"}
-        params = {"api_key": self.api_key, "query": query, "pageSize": self.DEFAULT_PAGE_SIZE}
-        return requests.get(self.SEARCH_URL, headers=headers, params=params, timeout=self.DEFAULT_TIMEOUT_SECONDS)
-
-    def _request_post(self, query: str) -> requests.Response:
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        params = {"api_key": self.api_key}
-        payload = {"query": query, "pageSize": self.DEFAULT_PAGE_SIZE}
-        return requests.post(self.SEARCH_URL, headers=headers, params=params, json=payload, timeout=self.DEFAULT_TIMEOUT_SECONDS)
-
     def _parse_response(self, response: requests.Response) -> dict:
         content_type = response.headers.get("Content-Type", "")
         if "application/json" not in content_type.lower():
@@ -132,6 +65,17 @@ class USDAService:
             )
         return foods
 
+    def _request_post(self, query: str) -> requests.Response:
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        params = {"api_key": self.api_key}
+        payload = {"query": query, "pageSize": self.DEFAULT_PAGE_SIZE}
+        return requests.post(self.SEARCH_URL, headers=headers, params=params, json=payload, timeout=self.DEFAULT_TIMEOUT_SECONDS)
+
+    def _request_get(self, query: str) -> requests.Response:
+        headers = {"Accept": "application/json"}
+        params = {"api_key": self.api_key, "query": query, "pageSize": self.DEFAULT_PAGE_SIZE}
+        return requests.get(self.SEARCH_URL, headers=headers, params=params, timeout=self.DEFAULT_TIMEOUT_SECONDS)
+
     def search_foods(self, ingredient_name: str) -> list[dict]:
         self._ensure_config()
         query = ingredient_name.strip()
@@ -139,16 +83,13 @@ class USDAService:
             return []
 
         last_error: USDAServiceError | None = None
-
-        for method in ("GET", "POST"):
+        for method in ("POST", "GET"):
             try:
-                response = self._request_get(query) if method == "GET" else self._request_post(query)
+                response = self._request_post(query) if method == "POST" else self._request_get(query)
                 content_type = response.headers.get("Content-Type", "")
                 self._local_log(f"query='{query}' method={method} status={response.status_code} content_type='{content_type}'")
-
                 if response.status_code >= 400:
                     raise USDAServiceError(self._status_error_message(response.status_code))
-
                 payload = self._parse_response(response)
                 foods = self._normalize_foods(payload.get("foods", []))
                 self._local_log(f"query='{query}' candidates={len(foods)}")
@@ -159,5 +100,73 @@ class USDAService:
                 last_error = USDAServiceError("USDA request failed due to network or connection issue.")
             except USDAServiceError as exc:
                 last_error = exc
+                if method == "POST":
+                    self._local_log(f"POST failed for query='{query}', trying GET fallback.")
 
         raise last_error or USDAServiceError("USDA request failed.")
+
+    def extract_nutrients_from_food(self, food: dict) -> tuple[dict, list[str]]:
+        nutrients = food.get("food_nutrients", [])
+        warnings: list[str] = []
+        values = {"calories": 0.0, "protein_g": 0.0, "carbs_g": 0.0, "fat_g": 0.0, "fiber_g": 0.0, "sugar_g": 0.0, "sodium_mg": 0.0}
+
+        number_map = {"203": "protein_g", "205": "carbs_g", "204": "fat_g", "291": "fiber_g", "269": "sugar_g", "307": "sodium_mg"}
+        id_map = {1003: "protein_g", 1005: "carbs_g", 1004: "fat_g", 1079: "fiber_g", 2000: "sugar_g", 1093: "sodium_mg"}
+
+        kcal_found = None
+        kj_found = None
+
+        for nutrient in nutrients:
+            raw_value = nutrient.get("value")
+            if raw_value in (None, ""):
+                continue
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                continue
+
+            unit = str(nutrient.get("unitName", "")).strip().lower()
+            nutrient_number = str(nutrient.get("nutrientNumber", "")).strip()
+            nutrient_name = str(nutrient.get("nutrientName", "")).strip().lower()
+            nutrient_id = nutrient.get("nutrientId")
+            try:
+                nutrient_id = int(nutrient_id)
+            except (TypeError, ValueError):
+                nutrient_id = None
+
+            if nutrient_number == "208" or nutrient_id == 1008 or "energy" in nutrient_name or "calorie" in nutrient_name:
+                if unit == "kj":
+                    kj_found = value
+                else:
+                    kcal_found = value
+                continue
+
+            target = number_map.get(nutrient_number)
+            if target is None and nutrient_id is not None:
+                target = id_map.get(nutrient_id)
+            if target is None:
+                if "protein" in nutrient_name:
+                    target = "protein_g"
+                elif "carbohydrate" in nutrient_name:
+                    target = "carbs_g"
+                elif "lipid" in nutrient_name or nutrient_name == "fat":
+                    target = "fat_g"
+                elif "fiber" in nutrient_name:
+                    target = "fiber_g"
+                elif "sugar" in nutrient_name:
+                    target = "sugar_g"
+                elif "sodium" in nutrient_name:
+                    target = "sodium_mg"
+            if target:
+                values[target] = value
+
+        if kcal_found is not None:
+            values["calories"] = kcal_found
+        elif kj_found is not None:
+            values["calories"] = round(kj_found / 4.184, 2)
+            warnings.append("Converted USDA energy from kJ to kcal.")
+
+        if values["calories"] > 950:
+            warnings.append("USDA calories per 100g look suspiciously high.")
+
+        return values, warnings

@@ -1,95 +1,90 @@
-"""USDA food match agent.
-
-Deterministic selector for choosing the best USDA food candidate from search results.
-Designed so future versions can replace scoring with an OpenAI-based selector.
-"""
+"""Deterministic USDA food match selector."""
 
 import re
 
 
 class USDAFoodMatchAgent:
-    DATA_TYPE_RANK = {
-        "foundation": 0,
-        "sr legacy": 1,
-        "survey (fndds)": 2,
-        "branded": 3,
-    }
+    DATA_TYPE_RANK = {"foundation": 0, "sr legacy": 1, "survey (fndds)": 2, "branded": 3}
+    NOISY_WORDS = {"roll", "spread", "sauce", "soup", "baby", "formula", "restaurant", "fast", "prepared", "product"}
 
     def _tokenize(self, text: str) -> set[str]:
         return {token for token in re.findall(r"[a-z0-9]+", text.lower()) if token}
 
-    def _score_food(self, query: str, food: dict) -> tuple[float, list[str]]:
-        description = str(food.get("description", "")).strip().lower()
-        data_type = str(food.get("data_type", "")).strip().lower()
+    def _looks_brand_query(self, query: str) -> bool:
+        return len(self._tokenize(query)) >= 2 and all(len(t) <= 5 for t in self._tokenize(query))
+
+    def _score_food(self, query: str, food: dict, has_generic: bool) -> tuple[float, list[str]]:
+        q = query.strip().lower()
+        description = str(food.get("description", "")).lower().strip()
+        data_type = str(food.get("data_type", "")).lower().strip()
 
         score = 0.0
-        reasons: list[str] = []
+        reasons = []
 
-        # Data type preference
-        rank = self.DATA_TYPE_RANK.get(data_type, 4)
-        score += max(0, 4 - rank) * 20
-        reasons.append(f"data_type_rank={rank}")
+        score += (4 - self.DATA_TYPE_RANK.get(data_type, 4)) * 20
+        if data_type == "branded" and has_generic:
+            score -= 35
+            reasons.append("branded_penalty")
 
-        query_tokens = self._tokenize(query)
-        desc_tokens = self._tokenize(description)
-        overlap = len(query_tokens & desc_tokens)
-        score += overlap * 12
-
-        # Exact/close match preference
-        if query.strip().lower() == description:
-            score += 35
-            reasons.append("exact_description")
-        elif query.strip().lower() in description:
-            score += 22
-            reasons.append("query_in_description")
-
-        # Generic/simple preference
-        if len(description) <= 40:
-            score += 6
-        if any(word in description for word in ["brand", "flavor", "ready", "frozen", "microwave", "packet"]):
-            score -= 10
-            reasons.append("packaged_penalty")
-
-        # Query-specific boosters
-        q = query.strip().lower()
-        if q in {"egg", "eggs"} and "egg" in description and "whole" in description:
-            score += 30
-            reasons.append("egg_whole_boost")
-        if q == "cheddar cheese" and ("cheese, cheddar" in description or "cheddar cheese" in description):
-            score += 30
-            reasons.append("cheddar_boost")
-        if q == "milk" and "milk" in description and "chocolate" not in description:
-            score += 22
-            reasons.append("generic_milk_boost")
-
-        # Penalize unrelated noisy descriptions
+        q_tokens = self._tokenize(q)
+        d_tokens = self._tokenize(description)
+        overlap = len(q_tokens & d_tokens)
+        score += overlap * 15
         if overlap == 0:
             score -= 25
-            reasons.append("no_token_overlap_penalty")
+
+        if q in description:
+            score += 20
+        if len(description) > 70:
+            score -= 12
+
+        if any(word in d_tokens for word in self.NOISY_WORDS):
+            score -= 18
+            reasons.append("noisy_description_penalty")
+
+        if q == "chicken":
+            if "chicken breast" in description or "roasted chicken" in description or "chicken, cooked" in description:
+                score += 20
+            if "chicken roll" in description:
+                score -= 30
+                reasons.append("chicken_roll_penalty")
+
+        if q == "milk":
+            if "milk" in description and data_type != "branded":
+                score += 18
+            if data_type == "branded" and not self._looks_brand_query(q):
+                score -= 20
+
+        if q == "cheddar cheese":
+            if "cheese, cheddar" in description or "cheddar cheese" in description:
+                score += 24
+
+        if q in {"egg", "eggs"} and "egg" in description and "whole" in description:
+            score += 20
 
         return score, reasons
 
     def choose_best_match(self, query: str, foods: list[dict]) -> dict:
         if not foods:
-            return {"match": None, "confidence": 0.0, "warning": "No USDA candidates returned.", "reason": "no_candidates"}
+            return {"match": None, "confidence": 0.0, "reason": "no_candidates", "warning": "No USDA candidates returned."}
 
-        scored: list[tuple[float, dict, list[str]]] = []
+        has_generic = any(str(f.get("data_type", "")).lower().strip() != "branded" for f in foods)
+        scored = []
         for food in foods:
-            score, reasons = self._score_food(query, food)
+            score, reasons = self._score_food(query, food, has_generic)
             scored.append((score, food, reasons))
+        scored.sort(key=lambda item: item[0], reverse=True)
 
-        scored.sort(key=lambda x: x[0], reverse=True)
         best_score, best_food, reasons = scored[0]
-
         warning = None
-        if best_score < 18:
+        if best_score < 25:
             warning = f"USDA match confidence is low for '{query}'."
-        elif str(best_food.get("data_type", "")).lower() == "branded":
+        elif str(best_food.get("data_type", "")).lower() == "branded" and not self._looks_brand_query(query):
             warning = f"Used branded USDA match for '{query}'."
 
         return {
             "match": best_food if best_score >= 8 else None,
-            "confidence": round(best_score, 2),
+            "confidence": round(best_score, 1),
+            "reason": ", ".join(reasons) if reasons else "scored_by_overlap_and_data_type",
             "warning": warning,
-            "reason": ", ".join(reasons[:4]),
         }

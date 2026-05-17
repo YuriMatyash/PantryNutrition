@@ -265,7 +265,7 @@ def debug_usda_search(query: str) -> dict:
                 "fdc_id": food.get("fdc_id"),
                 "description": food.get("description", ""),
                 "data_type": food.get("data_type", ""),
-                "per_100g": usda_service.extract_nutrients_from_food(food),
+                "per_100g": usda_service.extract_nutrients_from_food(food)[0],
             }
         )
 
@@ -276,7 +276,7 @@ def debug_usda_search(query: str) -> dict:
             "fdc_id": chosen_match.get("fdc_id"),
             "description": chosen_match.get("description", ""),
             "data_type": chosen_match.get("data_type", ""),
-            "per_100g": usda_service.extract_nutrients_from_food(chosen_match),
+            "per_100g": usda_service.extract_nutrients_from_food(chosen_match)[0],
             "confidence": selection.get("confidence"),
             "reason": selection.get("reason"),
         }
@@ -286,5 +286,7 @@ def debug_usda_search(query: str) -> dict:
         "count": len(candidates),
         "candidates": candidates,
         "chosen": chosen,
-        "warning": selection.get("warning"),
+        "confidence": selection.get("confidence"),
+        "reason": selection.get("reason"),
+        "warnings": [w for w in [selection.get("warning")] if w],
     }

@@ -53,6 +53,7 @@ class NutritionCalculatorAgent:
                         "fiber_g": 0.0,
                         "sugar_g": 0.0,
                         "sodium_mg": 0.0,
+                        "warning": item.get("warning"),
                     }
                 )
                 continue
@@ -68,13 +69,14 @@ class NutritionCalculatorAgent:
                 "data_type": item.get("data_type"),
                 "amount": item["amount"],
                 "unit": item["unit"],
-                "calories": round(float(per_100g.get("calories", 0)) * factor, 2),
-                "protein_g": round(float(per_100g.get("protein_g", 0)) * factor, 2),
-                "carbs_g": round(float(per_100g.get("carbs_g", 0)) * factor, 2),
-                "fat_g": round(float(per_100g.get("fat_g", 0)) * factor, 2),
-                "fiber_g": round(float(per_100g.get("fiber_g", 0)) * factor, 2),
-                "sugar_g": round(float(per_100g.get("sugar_g", 0)) * factor, 2),
-                "sodium_mg": round(float(per_100g.get("sodium_mg", 0)) * factor, 2),
+                "calories": round(float(per_100g.get("calories", 0)) * factor, 1),
+                "protein_g": round(float(per_100g.get("protein_g", 0)) * factor, 1),
+                "carbs_g": round(float(per_100g.get("carbs_g", 0)) * factor, 1),
+                "fat_g": round(float(per_100g.get("fat_g", 0)) * factor, 1),
+                "fiber_g": round(float(per_100g.get("fiber_g", 0)) * factor, 1),
+                "sugar_g": round(float(per_100g.get("sugar_g", 0)) * factor, 1),
+                "sodium_mg": round(float(per_100g.get("sodium_mg", 0)) * factor, 1),
+                "warning": item.get("warning") or factor_warning,
             }
             ingredients.append(ing)
 
@@ -86,14 +88,14 @@ class NutritionCalculatorAgent:
             if item.get("warning"):
                 warnings.append(item["warning"])
 
-            self._local_log(f"ingredient='{item['name']}' calories_contribution={ing['calories']}")
+            self._local_log(f"ingredient='{item['name']}' amount={item['amount']} unit={item['unit']} matched='{item.get('matched_usda_food')}' calories_per_100g={per_100g.get('calories',0)} factor={round(factor,3)} calories_contribution={ing['calories']}")
 
         return {
             "total": {
-                "calories": round(total["calories"], 2),
-                "protein_g": round(total["protein_g"], 2),
-                "carbs_g": round(total["carbs_g"], 2),
-                "fat_g": round(total["fat_g"], 2),
+                "calories": round(total["calories"], 1),
+                "protein_g": round(total["protein_g"], 1),
+                "carbs_g": round(total["carbs_g"], 1),
+                "fat_g": round(total["fat_g"], 1),
             },
             "ingredients": ingredients,
             "warnings": warnings,
