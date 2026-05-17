@@ -33,6 +33,7 @@ class NutritionCalculatorAgent:
                 "name": item["name"],
                 "matched_usda_food": item.get("matched_usda_food", item["name"]),
                 "usda_food_id": item.get("usda_food_id"),
+                "data_type": item.get("data_type"),
                 "amount": item["amount"],
                 "unit": item["unit"],
                 "calories": round(float(per_100g.get("calories", 0)) * factor, 2),

@@ -28,6 +28,7 @@ class NutritionLookupAgent:
             "amount": item["amount"],
             "unit": item["unit"],
             "per_100g": nutrition,
+            "data_type": "mock",
             "warning": None,
         }
 
@@ -51,6 +52,7 @@ class NutritionLookupAgent:
                             "amount": item["amount"],
                             "unit": item["unit"],
                             "per_100g": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0},
+                            "data_type": None,
                             "warning": f"No USDA match found for '{item['name']}'.",
                         }
                     )
@@ -68,6 +70,7 @@ class NutritionLookupAgent:
                         "amount": item["amount"],
                         "unit": item["unit"],
                         "per_100g": match.get("per_100g", {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}),
+                        "data_type": match.get("data_type", ""),
                         "warning": warning,
                     }
                 )
@@ -82,6 +85,7 @@ class NutritionLookupAgent:
                         "amount": item["amount"],
                         "unit": item["unit"],
                         "per_100g": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0},
+                        "data_type": None,
                         "warning": f"USDA lookup failed for '{item['name']}': {exc}",
                     }
                 )
