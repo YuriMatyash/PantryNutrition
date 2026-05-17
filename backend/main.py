@@ -17,7 +17,7 @@ from agents.recipe_editor_agent import RecipeEditorAgent
 from agents.validation_agent import ValidationAgent
 from models.schemas import LoginRequest, PantryUpdateRequest, RecipeEditRequest, RecipeGenerateRequest, RegisterRequest
 from services.openai_service import OpenAIConfigError, OpenAIJSONError
-from services.usda_service import USDAConfigError, USDAServiceError
+from services.usda_service import USDAConfigError, USDAService, USDAServiceError
 from services.supabase_service import (
     DuplicateUsernameError,
     SupabaseConfigError,
@@ -238,3 +238,31 @@ def edit_recipe(recipe_id: str, payload: RecipeEditRequest) -> dict:
 
     conversation_agent.add_message(conversation_id, "assistant", f"Updated recipe: {saved_recipe['title']}")
     return {"recipe": saved_recipe, "conversation_id": conversation_id}
+
+
+@app.get("/api/debug/usda-search")
+def debug_usda_search(query: str) -> dict:
+    if os.getenv("APP_ENV", "local").lower() != "local":
+        raise HTTPException(status_code=404, detail={"error": "Not found."})
+    if not query.strip():
+        raise HTTPException(status_code=400, detail={"error": "query is required."})
+
+    usda_service = USDAService()
+    try:
+        foods = usda_service.search_foods(query)
+    except USDAConfigError as exc:
+        raise HTTPException(status_code=500, detail={"error": str(exc)})
+    except USDAServiceError as exc:
+        raise HTTPException(status_code=503, detail={"error": str(exc)})
+
+    sanitized = []
+    for food in foods[:5]:
+        sanitized.append(
+            {
+                "fdc_id": food.get("fdcId"),
+                "description": food.get("description", ""),
+                "data_type": food.get("dataType", ""),
+            }
+        )
+
+    return {"query": query, "count": len(foods), "matches": sanitized}
