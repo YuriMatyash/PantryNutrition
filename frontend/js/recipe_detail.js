@@ -75,6 +75,24 @@ function renderRecipeDetail(recipe) {
     missingSection.style.display = "none";
   }
 
+
+  const usdaSection = document.getElementById("usda-match-section");
+  const usdaBody = document.getElementById("usda-match-body");
+  if (usdaSection && usdaBody) {
+    usdaBody.innerHTML = "";
+    const items = recipe.nutrition?.ingredients || [];
+    if (items.length > 0) {
+      usdaSection.style.display = "block";
+      items.forEach((item) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.name || ""}</td><td>${item.matched_usda_food || "-"}</td><td>${item.data_type || "-"}</td><td>${item.warning || "-"}</td>`;
+        usdaBody.appendChild(row);
+      });
+    } else {
+      usdaSection.style.display = "none";
+    }
+  }
+
   document.getElementById("recipe-content").style.display = "block";
 }
 
