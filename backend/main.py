@@ -15,6 +15,7 @@ from agents.pantry_agent import PantryAgent
 from agents.recipe_generator_agent import RecipeGeneratorAgent
 from agents.recipe_editor_agent import RecipeEditorAgent
 from agents.validation_agent import ValidationAgent
+from agents.usda_food_match_agent import USDAFoodMatchAgent
 from models.schemas import LoginRequest, PantryUpdateRequest, RecipeEditRequest, RecipeGenerateRequest, RegisterRequest
 from services.openai_service import OpenAIConfigError, OpenAIJSONError
 from services.usda_service import USDAConfigError, USDAService, USDAServiceError
@@ -47,6 +48,7 @@ nutrition_lookup_agent = NutritionLookupAgent()
 nutrition_calculator_agent = NutritionCalculatorAgent()
 validation_agent = ValidationAgent()
 conversation_agent = ConversationAgent(supabase_service)
+usda_food_match_agent = USDAFoodMatchAgent()
 
 
 @app.get("/api/health")
@@ -250,19 +252,39 @@ def debug_usda_search(query: str) -> dict:
     usda_service = USDAService()
     try:
         foods = usda_service.search_foods(query)
+        selection = usda_food_match_agent.choose_best_match(query, foods)
     except USDAConfigError as exc:
         raise HTTPException(status_code=500, detail={"error": str(exc)})
     except USDAServiceError as exc:
         raise HTTPException(status_code=503, detail={"error": str(exc)})
 
-    sanitized = []
-    for food in foods[:5]:
-        sanitized.append(
+    candidates = []
+    for food in foods:
+        candidates.append(
             {
-                "fdc_id": food.get("fdcId"),
+                "fdc_id": food.get("fdc_id"),
                 "description": food.get("description", ""),
-                "data_type": food.get("dataType", ""),
+                "data_type": food.get("data_type", ""),
+                "per_100g": usda_service.extract_nutrients_from_food(food),
             }
         )
 
-    return {"query": query, "count": len(foods), "matches": sanitized}
+    chosen_match = selection.get("match")
+    chosen = None
+    if chosen_match:
+        chosen = {
+            "fdc_id": chosen_match.get("fdc_id"),
+            "description": chosen_match.get("description", ""),
+            "data_type": chosen_match.get("data_type", ""),
+            "per_100g": usda_service.extract_nutrients_from_food(chosen_match),
+            "confidence": selection.get("confidence"),
+            "reason": selection.get("reason"),
+        }
+
+    return {
+        "query": query,
+        "count": len(candidates),
+        "candidates": candidates,
+        "chosen": chosen,
+        "warning": selection.get("warning"),
+    }
