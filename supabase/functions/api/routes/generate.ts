@@ -74,34 +74,65 @@ export async function handleGenerate(req: Request, pathname: string, origin: str
   }
 }
 
+const debugFallbacks: Record<string, string[]> = {
+  egg: ["whole egg", "egg whole", "Eggs, Grade A, Large, egg whole"],
+  eggs: ["whole egg", "egg whole", "Eggs, Grade A, Large, egg whole"],
+  rice: ["rice white cooked", "rice brown cooked", "rice white long grain cooked", "rice white long grain raw", "rice white uncooked"],
+  milk: ["milk whole", "whole milk", "milk reduced fat", "milk lowfat"],
+  "cheddar cheese": ["Cheese, cheddar", "cheddar cheese"],
+};
+
 export async function handleDebugUSDASearch(url: URL, origin: string | null): Promise<Response> {
   if (String(Deno.env.get("APP_ENV") ?? "").toLowerCase() !== "local") return errorResponse("Not found", 404, origin);
   const query = (url.searchParams.get("query") || "").trim();
   if (!query) return errorResponse("query is required.", 400, origin);
 
   try {
-    const { candidates } = await searchUSDAFoods(query, 20);
-    const chosen = chooseUSDAFood(query, candidates);
-    const normalized = candidates.map((c) => ({
-      fdc_id: c.fdc_id,
-      description: c.description,
-      data_type: c.data_type,
-      per_100g: extractPer100(c).per100,
-    }));
+    const qKey = query.toLowerCase();
+    const tried = [query, ...(debugFallbacks[qKey] || [])];
+    const warnings: string[] = [];
+    const rejected_all: Array<{query: string; description: string; reason: string}> = [];
+    let finalChosen: ReturnType<typeof chooseUSDAFood> | null = null;
+    let finalCandidates: Array<{fdc_id:number;description:string;data_type:string;per_100g:unknown}> = [];
+
+    for (let i = 0; i < tried.length; i += 1) {
+      const q = tried[i];
+      const { candidates } = await searchUSDAFoods(q, 20);
+      const chosen = chooseUSDAFood(query, candidates);
+      if (i > 0) warnings.push(`Used fallback USDA query: ${q}`);
+      warnings.push(...chosen.warnings);
+      rejected_all.push(...chosen.rejected.map((r) => ({ query: q, ...r })));
+
+      finalCandidates = candidates.map((c) => ({
+        fdc_id: c.fdc_id,
+        description: c.description,
+        data_type: c.data_type,
+        per_100g: extractPer100(c).per100,
+      }));
+
+      if (chosen.accepted && chosen.food) {
+        finalChosen = chosen;
+        break;
+      }
+      if (!finalChosen) finalChosen = chosen;
+    }
 
     return jsonResponse({
       query,
-      count: normalized.length,
-      candidates: normalized,
-      chosen: chosen.food ? {
-        fdc_id: chosen.food.fdc_id,
-        description: chosen.food.description,
-        data_type: chosen.food.data_type,
-        confidence: chosen.confidence,
-        reason: chosen.reason,
-        per_100g: extractPer100(chosen.food).per100,
+      fallback_queries_tried: tried,
+      count: finalCandidates.length,
+      candidates: finalCandidates,
+      chosen: finalChosen?.food ? {
+        fdc_id: finalChosen.food.fdc_id,
+        description: finalChosen.food.description,
+        data_type: finalChosen.food.data_type,
+        confidence: finalChosen.confidence,
+        reason: finalChosen.reason,
+        per_100g: extractPer100(finalChosen.food).per100,
       } : null,
-      warnings: chosen.warnings,
+      accepted: Boolean(finalChosen?.accepted && finalChosen?.food),
+      rejected_candidates: rejected_all,
+      warnings,
     }, 200, {}, origin);
   } catch (e) {
     return errorResponse(e instanceof Error ? e.message : "USDA debug failed.", 500, origin);

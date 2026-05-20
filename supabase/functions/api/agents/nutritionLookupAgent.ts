@@ -15,12 +15,12 @@ const MOCK_DB: Record<string, Per100> = {
 
 const fallbackMap: Record<string, string[]> = {
   pasta: ["pasta cooked", "spaghetti", "macaroni", "noodles"],
-  rice: ["rice cooked", "white rice", "brown rice"],
-  "cheddar cheese": ["cheese cheddar", "cheddar"],
-  milk: ["milk whole", "milk reduced fat"],
+  rice: ["rice white cooked", "rice brown cooked", "rice white long grain cooked", "rice white long grain raw", "rice white uncooked"],
+  "cheddar cheese": ["Cheese, cheddar", "cheddar cheese"],
+  milk: ["milk whole", "whole milk", "milk reduced fat", "milk lowfat"],
   chicken: ["chicken breast", "chicken cooked", "chicken"],
-  egg: ["egg whole", "eggs whole"],
-  eggs: ["egg whole", "eggs whole"],
+  egg: ["whole egg", "egg whole", "Eggs, Grade A, Large, egg whole"],
+  eggs: ["whole egg", "egg whole", "Eggs, Grade A, Large, egg whole"],
 };
 
 function nutrientValue(n: Record<string, unknown>): number {
@@ -91,7 +91,7 @@ async function lookupOneReal(name: string): Promise<{ food: USDAFoodCandidate | 
     if (chosen.food && chosen.confidence >= 0.6) break;
   }
 
-  if (!bestFood) return { food: null, per100: null, warnings: [...warnings, "No USDA match found."], confidence: bestConf, reason: bestReason, usedQuery };
+  if (!bestFood) return { food: null, per100: null, warnings: [...warnings, `No reliable USDA match found for '${name}'.`], confidence: bestConf, reason: bestReason, usedQuery };
   const ex = extractPer100(bestFood);
   return { food: bestFood, per100: ex.per100, warnings: [...warnings, ...ex.warnings], confidence: bestConf, reason: bestReason, usedQuery };
 }
