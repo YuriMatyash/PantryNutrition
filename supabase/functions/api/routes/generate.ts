@@ -1,7 +1,7 @@
 import { extractIngredients } from "../agents/ingredientExtractorAgent.ts";
 import { mockLookupNutrition } from "../agents/nutritionLookupAgent.ts";
 import { calculateNutrition } from "../agents/nutritionCalculatorAgent.ts";
-import { generateMockRecipe } from "../agents/recipeGeneratorAgent.ts";
+import { generateRecipe, getOpenAIModel } from "../agents/recipeGeneratorAgent.ts";
 import { applyRecipeSanity } from "../agents/recipeSanityAgent.ts";
 import { validateRecipe } from "../agents/validationAgent.ts";
 import { cleanPantryItems } from "../agents/pantryAgent.ts";
@@ -29,7 +29,22 @@ export async function handleGenerate(req: Request, pathname: string, origin: str
 
     const conversationId = await startConversation(userId, message);
 
-    const draft = generateMockRecipe({ pantryItems: pantry, mealType, preference, useOnlyPantry, message, servings });
+
+    if (String(Deno.env.get("APP_ENV") ?? "").toLowerCase() === "local") {
+      console.log("[generate] openai_mode", {
+        mode: String(Deno.env.get("USE_MOCK_OPENAI") ?? "true").toLowerCase() === "true" ? "mock" : "real",
+        model: getOpenAIModel(),
+      });
+    }
+    const draft = await generateRecipe({ pantryItems: pantry, mealType, preference, useOnlyPantry, message, servings });
+
+    if (String(Deno.env.get("APP_ENV") ?? "").toLowerCase() === "local") {
+      console.log("[generate] recipe_summary", {
+        title: draft.title,
+        ingredient_count: Array.isArray(draft.ingredients) ? draft.ingredients.length : 0,
+        servings,
+      });
+    }
     validateRecipe(draft as unknown as Record<string, unknown>);
 
     const sanity = applyRecipeSanity(draft as unknown as Record<string, unknown>, useOnlyPantry, pantry);

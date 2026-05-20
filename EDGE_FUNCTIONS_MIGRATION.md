@@ -1108,3 +1108,23 @@ Invoke-RestMethod `
   -ContentType "application/json" `
   -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
 ```
+
+
+## Phase 6 local real OpenAI testing example
+
+```env
+USE_MOCK_OPENAI=false
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+OPENAI_MODEL=gpt-4o-mini
+USE_MOCK_USDA=true
+```
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
+```
+
+Real USDA remains Phase 7; keep `USE_MOCK_USDA=true`.

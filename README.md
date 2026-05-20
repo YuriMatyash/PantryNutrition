@@ -397,3 +397,30 @@ from conversations
 where user_id = YOUR_USER_ID
 order by created_at desc;
 ```
+
+
+### Phase 6 real OpenAI generation (USDA still mocked)
+
+Set `supabase/functions/.env.local`:
+
+```env
+APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+APP_ENV=local
+USE_MOCK_OPENAI=false
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+OPENAI_MODEL=gpt-4o-mini
+USE_MOCK_USDA=true
+```
+
+Run and test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
+```
+
+USDA lookup remains mocked in this phase (`USE_MOCK_USDA=true`).
