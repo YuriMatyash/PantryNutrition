@@ -1,6 +1,6 @@
 import { handleLogin, handleRegister } from "./routes/auth.ts";
 import { handleGetPantry, handlePutPantry } from "./routes/pantry.ts";
-import { handleDeleteRecipe, handleGetRecipe, handleListRecipes } from "./routes/recipes.ts";
+import { handleDeleteRecipe, handleEditRecipe, handleGetRecipe, handleListRecipes } from "./routes/recipes.ts";
 import { handleDebugUSDASearch, handleGenerate } from "./routes/generate.ts";
 import { preflightResponse } from "./utils/cors.ts";
 import { jsonResponse, notFoundResponse } from "./utils/response.ts";
@@ -39,6 +39,9 @@ Deno.serve(async (req: Request) => {
   }
   if (req.method === "DELETE" && /^\/api\/recipes\/[^/]+$/.test(url.pathname)) {
     return handleDeleteRecipe(url.pathname, url, origin);
+  }
+  if (req.method === "POST" && /^\/api\/recipes\/[^/]+\/edit$/.test(url.pathname)) {
+    return handleEditRecipe(req, url.pathname, origin);
   }
   if (req.method === "GET" && url.pathname === "/api/debug/usda-search") {
     return handleDebugUSDASearch(url, origin);

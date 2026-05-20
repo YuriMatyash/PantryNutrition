@@ -225,3 +225,50 @@ export async function linkConversationToRecipe(conversationId: string, recipeId:
   const { error } = await client.from("conversations").update({ recipe_id: recipeId }).eq("id", conversationId);
   if (error) throw new Error("Failed to link conversation.");
 }
+
+
+export async function updateRecipe(recipeId: string, userId: string, recipePayload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const client = getClient();
+  const updates = {
+    title: recipePayload.title,
+    description: recipePayload.description ?? null,
+    ingredients: recipePayload.ingredients ?? [],
+    instructions: recipePayload.instructions ?? [],
+    servings: recipePayload.servings ?? 1,
+    nutrition: recipePayload.nutrition ?? {},
+    tags: recipePayload.tags ?? [],
+  };
+
+  const { data, error } = await client
+    .from("recipes")
+    .update(updates)
+    .eq("id", recipeId)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error("Failed to update recipe.");
+  return data as Record<string, unknown>;
+}
+
+export async function getConversationByRecipe(recipeId: string, userId: string): Promise<Record<string, unknown> | null> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("conversations")
+    .select("id, user_id, recipe_id, messages")
+    .eq("recipe_id", recipeId)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error("Failed to load recipe conversation.");
+  return data ? (data as Record<string, unknown>) : null;
+}
+
+export async function getOrCreateRecipeConversation(recipeId: string, userId: string): Promise<string> {
+  const existing = await getConversationByRecipe(recipeId, userId);
+  if (existing?.id) return String(existing.id);
+  const conversationId = await createConversation(userId);
+  await linkConversationToRecipe(conversationId, recipeId);
+  return conversationId;
+}

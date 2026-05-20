@@ -424,3 +424,31 @@ Invoke-RestMethod `
 ```
 
 USDA lookup remains mocked in this phase (`USE_MOCK_USDA=true`).
+
+
+### Phase 8 recipe edit test
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID/edit" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"user_id":"YOUR_USER_ID","message":"Make it lower calorie."}
+```
+
+Verify updated recipe:
+
+```sql
+select id, user_id, title, ingredients, instructions, servings, nutrition, updated_at
+from recipes
+where id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID;
+```
+
+Verify conversation messages:
+
+```sql
+select id, user_id, recipe_id, messages, updated_at
+from conversations
+where recipe_id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID
+order by updated_at desc;
+```
