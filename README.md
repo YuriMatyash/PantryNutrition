@@ -496,3 +496,70 @@ Notes:
 - Frontend paths already call `/api/...`, and `API_BASE_URL` is set to `http://127.0.0.1:54321/functions/v1`.
 - Example final URL: `http://127.0.0.1:54321/functions/v1/api/register`.
 - FastAPI remains available locally as a fallback at `http://127.0.0.1:8000`.
+
+
+## Live Deployment
+
+Production URLs:
+
+- Frontend: https://pantrynutrition.netlify.app/
+- Backend Edge Function base URL: https://mznztlufwzftisrsjnvh.supabase.co/functions/v1
+
+Architecture summary:
+
+- Netlify static frontend
+- Supabase Edge Functions TypeScript/Deno backend
+- Supabase Postgres database
+- OpenAI API for recipe generation/editing
+- USDA FoodData Central API for nutrition
+- Supabase secrets for server-side API keys
+
+### Testing frontend against deployed backend
+
+The deployed frontend already targets the deployed backend and is reachable from external networks.
+
+### CORS note
+
+Allowed frontend origins should include:
+- `http://127.0.0.1:5500`
+- `http://localhost:5500`
+- `https://pantrynutrition.netlify.app`
+
+CORS allows the browser frontend to call a backend hosted on a different domain.
+
+### Deployed endpoint examples
+
+Base: `https://mznztlufwzftisrsjnvh.supabase.co/functions/v1`
+
+- `GET /api/health`
+- `POST /api/register`
+- `POST /api/login`
+- `GET /api/users/{user_id}/pantry`
+- `PUT /api/users/{user_id}/pantry`
+- `POST /api/users/{user_id}/recipes/generate`
+- `GET /api/users/{user_id}/recipes`
+- `GET /api/recipes/{recipe_id}?user_id={user_id}`
+- `POST /api/recipes/{recipe_id}/edit`
+- `DELETE /api/recipes/{recipe_id}?user_id={user_id}`
+
+### Demo checklist
+
+1. Open https://pantrynutrition.netlify.app/
+2. Register or login
+3. Add pantry items
+4. Save pantry
+5. Generate recipe
+6. Show nutrition summary
+7. Open saved recipe
+8. Edit recipe with chatbot
+9. Show updated recipe and nutrition
+10. Show Supabase tables if needed: `users`, `pantries`, `recipes`, `conversations`
+
+### Known limitations and security notes
+
+- Current auth is custom username/password for demo simplicity.
+- Edge Function is deployed with `--no-verify-jwt` because Supabase Auth JWT flow is not enabled yet.
+- Production improvement path: Supabase Auth + Row Level Security + rate limiting.
+- USDA matching is deterministic and may not always choose perfect matches.
+- Nutrition values are estimates, not medical/dietary advice.
+- API keys are stored as Supabase secrets, never in frontend code.
