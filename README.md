@@ -470,3 +470,29 @@ from conversations
 where recipe_id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID
 order by updated_at desc;
 ```
+
+
+## Testing frontend against local Edge Functions
+
+1. Start local Supabase stack if needed (`npx supabase start`).
+2. Serve the Edge Function:
+
+```bash
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+3. Serve the frontend:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+4. Open:
+
+- `http://127.0.0.1:5500`
+
+Notes:
+- Frontend paths already call `/api/...`, and `API_BASE_URL` is set to `http://127.0.0.1:54321/functions/v1`.
+- Example final URL: `http://127.0.0.1:54321/functions/v1/api/register`.
+- FastAPI remains available locally as a fallback at `http://127.0.0.1:8000`.
