@@ -215,6 +215,86 @@ Conversations are stored in the `conversations` table as JSON messages.
 Each message contains role/content/timestamp.
 Conversations can be linked to a recipe via `recipe_id`.
 
+
+## Experimental Supabase Edge Function Backend
+
+An experimental Supabase Edge Function backend is now being developed in parallel under `supabase/functions/api/`.
+
+- This is **Phase 3** of the migration and currently includes health, auth, and pantry routes for local testing.
+- The existing FastAPI backend in `backend/` remains the current working backend for app features.
+- Recipes, OpenAI, USDA, and chatbot edit flows are not migrated yet.
+- For local Edge Function env files, use app-prefixed names for Supabase secrets: `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` (avoid `SUPABASE_` prefix in `--env-file`).
+
+Run the Edge Function locally:
+
+> Local routing note: inside the function this resolves to `/api/health`, which should be treated as the canonical health route.
+
+
+```bash
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+Then test:
+
+- `http://127.0.0.1:54321/functions/v1/api/health` (canonical health URL)
+
+Auth test payloads (Phase 2):
+
+```env
+# supabase/functions/.env.local
+APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+APP_ENV=local
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+PowerShell register test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/register" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
+PowerShell login test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/login" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
+PowerShell pantry GET test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```
+
+PowerShell pantry PUT test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Put `
+  -ContentType "application/json" `
+  -Body '{"items":[{"name":"egg","amount":3,"unit":"unit"},{"name":"rice","amount":300,"unit":"g"}]}'
+```
+
+PowerShell pantry GET after save:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```
+
 ---
 
 ## 11) Known limitations
