@@ -1156,3 +1156,19 @@ from conversations
 where recipe_id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID
 order by updated_at desc;
 ```
+
+
+### Phase 8 timestamp verification
+
+After editing a recipe, verify timestamps update:
+
+```sql
+select id, title, updated_at
+from recipes
+where id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID;
+
+select id, recipe_id, updated_at, messages
+from conversations
+where recipe_id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID
+order by updated_at desc;
+```

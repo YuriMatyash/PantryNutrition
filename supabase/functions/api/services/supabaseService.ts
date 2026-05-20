@@ -216,13 +216,19 @@ export async function addConversationMessage(conversationId: string, role: strin
     ? ([...(data as Record<string, unknown>).messages as Array<Record<string, unknown>>])
     : [];
   messages.push({ role, content, created_at: new Date().toISOString() });
-  const { error: updateError } = await client.from("conversations").update({ messages }).eq("id", conversationId);
+  const { error: updateError } = await client
+    .from("conversations")
+    .update({ messages, updated_at: new Date().toISOString() })
+    .eq("id", conversationId);
   if (updateError) throw new Error("Failed to update conversation.");
 }
 
 export async function linkConversationToRecipe(conversationId: string, recipeId: string): Promise<void> {
   const client = getClient();
-  const { error } = await client.from("conversations").update({ recipe_id: recipeId }).eq("id", conversationId);
+  const { error } = await client
+    .from("conversations")
+    .update({ recipe_id: recipeId, updated_at: new Date().toISOString() })
+    .eq("id", conversationId);
   if (error) throw new Error("Failed to link conversation.");
 }
 
@@ -237,6 +243,7 @@ export async function updateRecipe(recipeId: string, userId: string, recipePaylo
     servings: recipePayload.servings ?? 1,
     nutrition: recipePayload.nutrition ?? {},
     tags: recipePayload.tags ?? [],
+    updated_at: new Date().toISOString(),
   };
 
   const { data, error } = await client
