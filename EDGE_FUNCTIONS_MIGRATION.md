@@ -1014,3 +1014,37 @@ Invoke-RestMethod `
   -ContentType "application/json" `
   -Body '{"username":"yuri","password":"1234"}'
 ```
+
+## Phase 3 local pantry testing example
+
+Run locally:
+
+```powershell
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+GET pantry:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```
+
+PUT pantry:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Put `
+  -ContentType "application/json" `
+  -Body '{"items":[{"name":"egg","amount":3,"unit":"unit"},{"name":"rice","amount":300,"unit":"g"}]}'
+```
+
+GET pantry again:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```

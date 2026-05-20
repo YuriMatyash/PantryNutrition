@@ -220,9 +220,9 @@ Conversations can be linked to a recipe via `recipe_id`.
 
 An experimental Supabase Edge Function backend is now being developed in parallel under `supabase/functions/api/`.
 
-- This is **Phase 1** of the migration and currently includes only health routes for local testing.
+- This is **Phase 3** of the migration and currently includes health, auth, and pantry routes for local testing.
 - The existing FastAPI backend in `backend/` remains the current working backend for app features.
-- No auth, pantry, recipes, OpenAI, USDA, or chatbot flows are migrated yet.
+- Recipes, OpenAI, USDA, and chatbot edit flows are not migrated yet.
 - For local Edge Function env files, use app-prefixed names for Supabase secrets: `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` (avoid `SUPABASE_` prefix in `--env-file`).
 
 Run the Edge Function locally:
@@ -267,6 +267,32 @@ Invoke-RestMethod `
   -Method Post `
   -ContentType "application/json" `
   -Body '{"username":"yuri","password":"1234"}'
+```
+
+PowerShell pantry GET test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```
+
+PowerShell pantry PUT test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Put `
+  -ContentType "application/json" `
+  -Body '{"items":[{"name":"egg","amount":3,"unit":"unit"},{"name":"rice","amount":300,"unit":"g"}]}'
+```
+
+PowerShell pantry GET after save:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
 ```
 
 ---

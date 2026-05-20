@@ -68,3 +68,56 @@ export async function verifyLogin(username: string, password: string): Promise<{
 
   return { user_id: data.id as string, username: data.username as string };
 }
+
+
+export async function userExists(userId: string): Promise<boolean> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to check user existence.");
+  }
+
+  return Boolean(data);
+}
+
+export async function getPantry(userId: string): Promise<Array<{ name: string; amount: number; unit: string }>> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("pantries")
+    .select("items")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load pantry.");
+  }
+
+  const items = data?.items;
+  return Array.isArray(items) ? (items as Array<{ name: string; amount: number; unit: string }>) : [];
+}
+
+export async function upsertPantry(
+  userId: string,
+  items: Array<{ name: string; amount: number; unit: string }>,
+): Promise<Array<{ name: string; amount: number; unit: string }>> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("pantries")
+    .upsert({ user_id: userId, items }, { onConflict: "user_id" })
+    .select("items")
+    .single();
+
+  if (error || !data) {
+    throw new Error("Failed to save pantry.");
+  }
+
+  const saved = data.items;
+  return Array.isArray(saved) ? (saved as Array<{ name: string; amount: number; unit: string }>) : items;
+}
