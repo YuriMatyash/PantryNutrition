@@ -63,13 +63,13 @@ function extractPer100(food: USDAFoodCandidate): { per100: Per100 | null; warnin
 }
 
 async function lookupOneReal(name: string): Promise<{ food: USDAFoodCandidate | null; per100: Per100 | null; warnings: string[]; confidence: number; reason: string; usedQuery: string }> {
-  const warnings: string[] = [];
   const queries = [name, ...(fallbackMap[name] || [])];
 
   let bestFood: USDAFoodCandidate | null = null;
   let bestConf = 0;
   let bestReason = "No USDA candidates";
   let usedQuery = name;
+  let fallbackWarnings: string[] = [];
 
   for (let i = 0; i < queries.length; i += 1) {
     const q = queries[i];
@@ -78,22 +78,21 @@ async function lookupOneReal(name: string): Promise<{ food: USDAFoodCandidate | 
     if (String(Deno.env.get("APP_ENV") ?? "").toLowerCase() === "local") {
       console.log("[usda] match", { query: q, method, candidate_count: candidates.length, chosen: chosen.food?.description ?? null, confidence: chosen.confidence, warnings: chosen.warnings });
     }
-    if (i > 0 && chosen.food) warnings.push(`Used fallback USDA query: ${q}`);
-    warnings.push(...chosen.warnings);
 
-    if (chosen.food && chosen.confidence >= bestConf) {
+    if (chosen.food && chosen.accepted && chosen.confidence >= bestConf) {
       bestFood = chosen.food;
       bestConf = chosen.confidence;
       bestReason = chosen.reason;
       usedQuery = q;
+      fallbackWarnings = i > 0 ? [`Used fallback USDA query: ${q}`] : [];
     }
 
-    if (chosen.food && chosen.confidence >= 0.6) break;
+    if (chosen.food && chosen.accepted && chosen.confidence >= 0.6) break;
   }
 
-  if (!bestFood) return { food: null, per100: null, warnings: [...warnings, `No reliable USDA match found for '${name}'.`], confidence: bestConf, reason: bestReason, usedQuery };
+  if (!bestFood) return { food: null, per100: null, warnings: [`No reliable USDA match found for '${name}'.`], confidence: bestConf, reason: bestReason, usedQuery };
   const ex = extractPer100(bestFood);
-  return { food: bestFood, per100: ex.per100, warnings: [...warnings, ...ex.warnings], confidence: bestConf, reason: bestReason, usedQuery };
+  return { food: bestFood, per100: ex.per100, warnings: [...fallbackWarnings, ...ex.warnings], confidence: bestConf, reason: bestReason, usedQuery };
 }
 
 export async function lookupNutrition(ingredients: Array<{name:string;amount:number;unit:string}>) {

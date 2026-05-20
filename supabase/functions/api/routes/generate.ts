@@ -90,7 +90,7 @@ export async function handleDebugUSDASearch(url: URL, origin: string | null): Pr
   try {
     const qKey = query.toLowerCase();
     const tried = [query, ...(debugFallbacks[qKey] || [])];
-    const warnings: string[] = [];
+    let warnings: string[] = [];
     const rejected_all: Array<{query: string; description: string; reason: string}> = [];
     let finalChosen: ReturnType<typeof chooseUSDAFood> | null = null;
     let finalCandidates: Array<{fdc_id:number;description:string;data_type:string;per_100g:unknown}> = [];
@@ -99,8 +99,9 @@ export async function handleDebugUSDASearch(url: URL, origin: string | null): Pr
       const q = tried[i];
       const { candidates } = await searchUSDAFoods(q, 20);
       const chosen = chooseUSDAFood(query, candidates);
-      if (i > 0) warnings.push(`Used fallback USDA query: ${q}`);
-      warnings.push(...chosen.warnings);
+      const attemptWarnings = [] as string[];
+      if (i > 0) attemptWarnings.push(`Used fallback USDA query: ${q}`);
+      if (!chosen.accepted) attemptWarnings.push(...chosen.warnings);
       rejected_all.push(...chosen.rejected.map((r) => ({ query: q, ...r })));
 
       finalCandidates = candidates.map((c) => ({
@@ -112,9 +113,13 @@ export async function handleDebugUSDASearch(url: URL, origin: string | null): Pr
 
       if (chosen.accepted && chosen.food) {
         finalChosen = chosen;
+        warnings = attemptWarnings;
         break;
       }
-      if (!finalChosen) finalChosen = chosen;
+      if (!finalChosen) {
+        finalChosen = chosen;
+        warnings = attemptWarnings;
+      }
     }
 
     return jsonResponse({

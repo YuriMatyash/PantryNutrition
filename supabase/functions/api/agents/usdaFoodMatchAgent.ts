@@ -39,8 +39,8 @@ function rejectionReason(qType: ReturnType<typeof queryType>, query: string, des
       return "rice query rejected non-plain rice variant";
     }
   }
-  if (qType === "milk" && !hasAny(q, ["cheese", "ricotta", "yogurt", "formula", "cream", "condensed", "evaporated"])) {
-    if (hasAny(d, ["cheese", "ricotta", "yogurt", "formula", "cream", "condensed", "evaporated"])) {
+  if (qType === "milk" && !hasAny(q, ["cheese", "ricotta", "yogurt", "formula", "cream", "condensed", "evaporated", "buttermilk", "cultured", "chocolate", "strawberry", "flavored"])) {
+    if (hasAny(d, ["cheese", "ricotta", "yogurt", "formula", "cream", "condensed", "evaporated", "buttermilk", "cultured", "chocolate", "strawberry", "flavored"])) {
       return "milk query rejected dairy product variant";
     }
   }
@@ -65,7 +65,7 @@ function similarityScore(query: string, desc: string): number {
   }
   if (type === "milk") {
     if (hasAny(d, ["whole milk", "lowfat milk", "reduced fat milk", "2% milk", "1% milk"])) score += 30;
-    if (hasAny(d, ["cheese", "ricotta", "yogurt", "powder", "chocolate", "flavored", "formula", "cream", "condensed", "evaporated"])) score -= 45;
+    if (hasAny(d, ["cheese", "ricotta", "yogurt", "powder", "chocolate", "flavored", "formula", "cream", "condensed", "evaporated", "buttermilk", "cultured", "strawberry"])) score -= 45;
   }
   if (type === "cheddar") {
     if (hasAny(d, ["cheese, cheddar", "cheddar cheese", "cheddar"])) score += 35;
