@@ -215,6 +215,110 @@ Conversations are stored in the `conversations` table as JSON messages.
 Each message contains role/content/timestamp.
 Conversations can be linked to a recipe via `recipe_id`.
 
+
+## Experimental Supabase Edge Function Backend
+
+An experimental Supabase Edge Function backend is now being developed in parallel under `supabase/functions/api/`.
+
+- This is **Phase 5** of the migration and currently includes health, auth, pantry, recipe-storage, and mock recipe generation routes for local testing.
+- The existing FastAPI backend in `backend/` remains the current working backend for app features.
+- Recipes, OpenAI, USDA, and chatbot edit flows are not migrated yet.
+- For local Edge Function env files, use app-prefixed names for Supabase secrets: `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` (avoid `SUPABASE_` prefix in `--env-file`).
+
+Run the Edge Function locally:
+
+> Local routing note: inside the function this resolves to `/api/health`, which should be treated as the canonical health route.
+
+
+```bash
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+Then test:
+
+- `http://127.0.0.1:54321/functions/v1/api/health` (canonical health URL)
+
+Auth test payloads (Phase 2):
+
+```env
+# supabase/functions/.env.local
+APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+APP_ENV=local
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+PowerShell register test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/register" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
+PowerShell login test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/login" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
+PowerShell pantry GET test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```
+
+PowerShell pantry PUT test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Put `
+  -ContentType "application/json" `
+  -Body '{"items":[{"name":"egg","amount":3,"unit":"unit"},{"name":"rice","amount":300,"unit":"g"}]}'
+```
+
+PowerShell pantry GET after save:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
+  -Method Get
+```
+
+PowerShell list recipes test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes" `
+  -Method Get
+```
+
+PowerShell get recipe by id test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID?user_id=YOUR_USER_ID" `
+  -Method Get
+```
+
+PowerShell delete recipe test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID?user_id=YOUR_USER_ID" `
+  -Method Delete
+```
+
 ---
 
 ## 11) Known limitations
@@ -257,3 +361,205 @@ Never commit:
 - `backend/.env`
 - real API keys/tokens/secrets
 - local virtualenv folders
+
+
+### Phase 5 mock generation test
+
+Ensure `supabase/functions/.env.local` includes:
+
+```env
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
+```
+
+Verify recipe row:
+
+```sql
+select id, user_id, title, created_at
+from recipes
+where user_id = YOUR_USER_ID
+order by created_at desc;
+```
+
+Verify conversation row:
+
+```sql
+select id, user_id, recipe_id, messages, created_at
+from conversations
+where user_id = YOUR_USER_ID
+order by created_at desc;
+```
+
+
+### Phase 6 real OpenAI generation (USDA still mocked)
+
+Set `supabase/functions/.env.local`:
+
+```env
+APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+APP_ENV=local
+USE_MOCK_OPENAI=false
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+OPENAI_MODEL=gpt-4o-mini
+USE_MOCK_USDA=true
+```
+
+Run and test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
+```
+
+USDA lookup remains mocked in this phase (`USE_MOCK_USDA=true`).
+
+
+### Phase 8 recipe edit test
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID/edit" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"user_id":"YOUR_USER_ID","message":"Make it lower calorie."}
+```
+
+Verify updated recipe:
+
+```sql
+select id, user_id, title, ingredients, instructions, servings, nutrition, updated_at
+from recipes
+where id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID;
+```
+
+Verify conversation messages:
+
+```sql
+select id, user_id, recipe_id, messages, updated_at
+from conversations
+where recipe_id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID
+order by updated_at desc;
+```
+
+
+Recipe edit timestamp verification:
+
+1) Call edit endpoint for a recipe.
+2) Verify `recipes.updated_at` changed.
+3) Verify `conversations.updated_at` changed.
+
+```sql
+select id, title, updated_at
+from recipes
+where id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID;
+
+select id, recipe_id, updated_at, messages
+from conversations
+where recipe_id = YOUR_RECIPE_ID and user_id = YOUR_USER_ID
+order by updated_at desc;
+```
+
+
+## Testing frontend against local Edge Functions
+
+1. Start local Supabase stack if needed (`npx supabase start`).
+2. Serve the Edge Function:
+
+```bash
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+3. Serve the frontend:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+4. Open:
+
+- `http://127.0.0.1:5500`
+
+Notes:
+- Frontend paths already call `/api/...`, and `API_BASE_URL` is set to `http://127.0.0.1:54321/functions/v1`.
+- Example final URL: `http://127.0.0.1:54321/functions/v1/api/register`.
+- FastAPI remains available locally as a fallback at `http://127.0.0.1:8000`.
+
+
+## Live Deployment
+
+Production URLs:
+
+- Frontend: https://pantrynutrition.netlify.app/
+- Backend Edge Function base URL: https://mznztlufwzftisrsjnvh.supabase.co/functions/v1
+
+Architecture summary:
+
+- Netlify static frontend
+- Supabase Edge Functions TypeScript/Deno backend
+- Supabase Postgres database
+- OpenAI API for recipe generation/editing
+- USDA FoodData Central API for nutrition
+- Supabase secrets for server-side API keys
+
+### Testing frontend against deployed backend
+
+The deployed frontend already targets the deployed backend and is reachable from external networks.
+
+### CORS note
+
+Allowed frontend origins should include:
+- `http://127.0.0.1:5500`
+- `http://localhost:5500`
+- `https://pantrynutrition.netlify.app`
+
+CORS allows the browser frontend to call a backend hosted on a different domain.
+
+### Deployed endpoint examples
+
+Base: `https://mznztlufwzftisrsjnvh.supabase.co/functions/v1`
+
+- `GET /api/health`
+- `POST /api/register`
+- `POST /api/login`
+- `GET /api/users/{user_id}/pantry`
+- `PUT /api/users/{user_id}/pantry`
+- `POST /api/users/{user_id}/recipes/generate`
+- `GET /api/users/{user_id}/recipes`
+- `GET /api/recipes/{recipe_id}?user_id={user_id}`
+- `POST /api/recipes/{recipe_id}/edit`
+- `DELETE /api/recipes/{recipe_id}?user_id={user_id}`
+
+### Demo checklist
+
+1. Open https://pantrynutrition.netlify.app/
+2. Register or login
+3. Add pantry items
+4. Save pantry
+5. Generate recipe
+6. Show nutrition summary
+7. Open saved recipe
+8. Edit recipe with chatbot
+9. Show updated recipe and nutrition
+10. Show Supabase tables if needed: `users`, `pantries`, `recipes`, `conversations`
+
+### Known limitations and security notes
+
+- Current auth is custom username/password for demo simplicity.
+- Edge Function is deployed with `--no-verify-jwt` because Supabase Auth JWT flow is not enabled yet.
+- Production improvement path: Supabase Auth + Row Level Security + rate limiting.
+- USDA matching is deterministic and may not always choose perfect matches.
+- Nutrition values are estimates, not medical/dietary advice.
+- API keys are stored as Supabase secrets, never in frontend code.
