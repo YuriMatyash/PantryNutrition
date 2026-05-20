@@ -36,6 +36,10 @@ export async function handleGenerate(req: Request, pathname: string, origin: str
     const ingredients = extractIngredients(sanity.recipe);
     const lookup = mockLookupNutrition(ingredients);
     const nutrition = calculateNutrition(lookup.items, servings, [...lookup.warnings, ...sanity.warnings]);
+    const nutritionWithMissing = {
+      ...nutrition,
+      missing_ingredients: draft.missing_ingredients ?? [],
+    };
 
     const saved = await saveRecipe(userId, {
       title: draft.title,
@@ -43,9 +47,8 @@ export async function handleGenerate(req: Request, pathname: string, origin: str
       ingredients: sanity.recipe.ingredients,
       instructions: draft.instructions,
       servings,
-      nutrition,
+      nutrition: nutritionWithMissing,
       tags: draft.tags,
-      missing_ingredients: draft.missing_ingredients,
     });
 
     await completeConversation(conversationId, String(saved.id), `Created recipe: ${saved.title}`);

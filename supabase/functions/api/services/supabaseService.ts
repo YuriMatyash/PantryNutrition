@@ -167,9 +167,33 @@ export async function deleteRecipe(recipeId: string, userId: string): Promise<bo
 
 export async function saveRecipe(userId: string, recipe: Record<string, unknown>): Promise<Record<string, unknown>> {
   const client = getClient();
-  const payload = { user_id: userId, ...recipe };
+
+  const payload = {
+    user_id: userId,
+    title: recipe.title,
+    description: recipe.description ?? null,
+    ingredients: recipe.ingredients ?? [],
+    instructions: recipe.instructions ?? [],
+    servings: recipe.servings ?? 1,
+    nutrition: recipe.nutrition ?? {},
+    tags: recipe.tags ?? [],
+  };
+
   const { data, error } = await client.from("recipes").insert(payload).select("*").single();
-  if (error || !data) throw new Error("Failed to save recipe.");
+
+  if (error || !data) {
+    if (String(Deno.env.get("APP_ENV") ?? "").toLowerCase() === "local") {
+      console.error("[saveRecipe] Supabase insert failed", {
+        insert_keys: Object.keys(payload),
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+      });
+    }
+    throw new Error("Failed to save recipe to Supabase.");
+  }
+
   return data as Record<string, unknown>;
 }
 
