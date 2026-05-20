@@ -215,6 +215,29 @@ Conversations are stored in the `conversations` table as JSON messages.
 Each message contains role/content/timestamp.
 Conversations can be linked to a recipe via `recipe_id`.
 
+
+## Experimental Supabase Edge Function Backend
+
+An experimental Supabase Edge Function backend is now being developed in parallel under `supabase/functions/api/`.
+
+- This is **Phase 1** of the migration and currently includes only health routes for local testing.
+- The existing FastAPI backend in `backend/` remains the current working backend for app features.
+- No auth, pantry, recipes, OpenAI, USDA, or chatbot flows are migrated yet.
+- For local Edge Function env files, use app-prefixed names for Supabase secrets: `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` (avoid `SUPABASE_` prefix in `--env-file`).
+
+Run the Edge Function locally:
+
+> Local routing note: inside the function this resolves to `/api/health`, which should be treated as the canonical health route.
+
+
+```bash
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+Then test:
+
+- `http://127.0.0.1:54321/functions/v1/api/health` (canonical health URL)
+
 ---
 
 ## 11) Known limitations
