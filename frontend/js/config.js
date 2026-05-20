@@ -9,4 +9,4 @@
 //
 // Future deployed Edge Function URL placeholder:
 //   https://YOUR_PROJECT_REF.supabase.co/functions/v1
-const API_BASE_URL = "http://127.0.0.1:54321/functions/v1";
+const API_BASE_URL = "https://mznztlufwzftisrsjnvh.supabase.co/functions/v1";
