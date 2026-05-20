@@ -1,7 +1,7 @@
 const ALLOWED_ORIGINS = new Set<string>([
   "http://127.0.0.1:5500",
   "http://localhost:5500",
-  // TODO: Add the production Netlify URL here in a future migration phase.
+  "https://pantrynutrition.netlify.app",
 ]);
 
 export function buildCorsHeaders(origin: string | null): HeadersInit {
