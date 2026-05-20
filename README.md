@@ -238,6 +238,37 @@ Then test:
 
 - `http://127.0.0.1:54321/functions/v1/api/health` (canonical health URL)
 
+Auth test payloads (Phase 2):
+
+```env
+# supabase/functions/.env.local
+APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+APP_ENV=local
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+PowerShell register test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/register" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
+PowerShell login test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/login" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
 ---
 
 ## 11) Known limitations

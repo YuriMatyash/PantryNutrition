@@ -1,9 +1,10 @@
+import { handleLogin, handleRegister } from "./routes/auth.ts";
 import { preflightResponse } from "./utils/cors.ts";
 import { jsonResponse, notFoundResponse } from "./utils/response.ts";
 
-// Local run command (Phase 1 migration):
+// Local run command (Phase 2 migration):
 // npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
-Deno.serve((req: Request) => {
+Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const origin = req.headers.get("origin");
 
@@ -13,13 +14,7 @@ Deno.serve((req: Request) => {
     return preflightResponse(origin);
   }
 
-  const isHealthRoute =
-    req.method === "GET" &&
-    (url.pathname === "/" ||
-      url.pathname === "/health" ||
-      url.pathname === "/api/health");
-
-  if (isHealthRoute) {
+  if (req.method === "GET" && url.pathname === "/api/health") {
     return jsonResponse(
       {
         status: "ok",
@@ -29,6 +24,14 @@ Deno.serve((req: Request) => {
       {},
       origin,
     );
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/register") {
+    return handleRegister(req, origin);
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/login") {
+    return handleLogin(req, origin);
   }
 
   return notFoundResponse(origin);
