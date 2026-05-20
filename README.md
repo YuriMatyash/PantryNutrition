@@ -220,7 +220,7 @@ Conversations can be linked to a recipe via `recipe_id`.
 
 An experimental Supabase Edge Function backend is now being developed in parallel under `supabase/functions/api/`.
 
-- This is **Phase 4** of the migration and currently includes health, auth, pantry, and recipe-storage routes for local testing.
+- This is **Phase 5** of the migration and currently includes health, auth, pantry, recipe-storage, and mock recipe generation routes for local testing.
 - The existing FastAPI backend in `backend/` remains the current working backend for app features.
 - Recipes, OpenAI, USDA, and chatbot edit flows are not migrated yet.
 - For local Edge Function env files, use app-prefixed names for Supabase secrets: `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` (avoid `SUPABASE_` prefix in `--env-file`).
@@ -361,3 +361,39 @@ Never commit:
 - `backend/.env`
 - real API keys/tokens/secrets
 - local virtualenv folders
+
+
+### Phase 5 mock generation test
+
+Ensure `supabase/functions/.env.local` includes:
+
+```env
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
+```
+
+Verify recipe row:
+
+```sql
+select id, user_id, title, created_at
+from recipes
+where user_id = YOUR_USER_ID
+order by created_at desc;
+```
+
+Verify conversation row:
+
+```sql
+select id, user_id, recipe_id, messages, created_at
+from conversations
+where user_id = YOUR_USER_ID
+order by created_at desc;
+```

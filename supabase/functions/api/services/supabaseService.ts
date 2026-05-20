@@ -163,3 +163,41 @@ export async function deleteRecipe(recipeId: string, userId: string): Promise<bo
   if (error) throw new Error("Failed to delete recipe.");
   return true;
 }
+
+
+export async function saveRecipe(userId: string, recipe: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const client = getClient();
+  const payload = { user_id: userId, ...recipe };
+  const { data, error } = await client.from("recipes").insert(payload).select("*").single();
+  if (error || !data) throw new Error("Failed to save recipe.");
+  return data as Record<string, unknown>;
+}
+
+export async function createConversation(userId: string): Promise<string> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("conversations")
+    .insert({ user_id: userId, recipe_id: null, messages: [] })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error("Failed to create conversation.");
+  return String((data as Record<string, unknown>).id);
+}
+
+export async function addConversationMessage(conversationId: string, role: string, content: string): Promise<void> {
+  const client = getClient();
+  const { data, error } = await client.from("conversations").select("messages").eq("id", conversationId).limit(1).maybeSingle();
+  if (error) throw new Error("Failed to load conversation.");
+  const messages = Array.isArray((data as Record<string, unknown> | null)?.messages)
+    ? ([...(data as Record<string, unknown>).messages as Array<Record<string, unknown>>])
+    : [];
+  messages.push({ role, content, created_at: new Date().toISOString() });
+  const { error: updateError } = await client.from("conversations").update({ messages }).eq("id", conversationId);
+  if (updateError) throw new Error("Failed to update conversation.");
+}
+
+export async function linkConversationToRecipe(conversationId: string, recipeId: string): Promise<void> {
+  const client = getClient();
+  const { error } = await client.from("conversations").update({ recipe_id: recipeId }).eq("id", conversationId);
+  if (error) throw new Error("Failed to link conversation.");
+}

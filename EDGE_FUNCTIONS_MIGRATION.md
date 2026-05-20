@@ -1090,3 +1090,21 @@ from recipes
 where user_id = YOUR_USER_ID
 order by created_at desc;
 ```
+
+
+## Phase 5 local mock generation testing example
+
+Use mock mode in `supabase/functions/.env.local`:
+
+```env
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes/generate" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body {"meal_type":"lunch","preference":"high protein","use_only_pantry":true,"message":"I want a filling high-protein lunch.","servings":1}
+```
