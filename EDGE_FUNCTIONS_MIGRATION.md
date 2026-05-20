@@ -176,8 +176,8 @@ USE_MOCK_OPENAI=true
 USE_MOCK_USDA=true
 APP_ENV=local
 
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+APP_SUPABASE_URL=https://your-project-ref.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 Do not commit this file.
@@ -202,11 +202,16 @@ USDA_API_KEY
 USE_MOCK_OPENAI
 USE_MOCK_USDA
 APP_ENV
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
+APP_SUPABASE_URL
+APP_SUPABASE_SERVICE_ROLE_KEY
 ```
 
 The service role key is allowed only inside trusted server-side code such as Edge Functions. It must never be used in browser/frontend code.
+
+Note about Supabase env vars:
+- In local `--env-file` usage, avoid names starting with `SUPABASE_` because Supabase CLI skips them.
+- Use app-specific names like `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` in local env files.
+- In deployed Edge Functions, Supabase provides default Supabase environment variables; custom app-prefixed names are still fine.
 
 ---
 
@@ -340,7 +345,6 @@ Add only:
 
 ```text
 GET /api/health
-GET /health
 ```
 
 Expected response:
@@ -355,21 +359,26 @@ Expected response:
 Test locally:
 
 ```powershell
-npx supabase functions serve api --env-file supabase/functions/.env.local
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
 ```
 
 Test endpoint:
 
 ```powershell
-Invoke-RestMethod "http://127.0.0.1:54321/functions/v1/api/api/health"
+Invoke-RestMethod "http://127.0.0.1:54321/functions/v1/api/health"
 ```
 
 Success criteria:
 
 - Edge Function starts locally.
 - CORS preflight works.
-- `/api/health` returns JSON.
+- `/api/health` returns JSON (canonical route).
 - FastAPI backend is untouched.
+
+Important local routing note:
+- External URL `http://127.0.0.1:54321/functions/v1/api/health` is seen inside the function as pathname `/api/health`.
+- Treat `/api/health` as the canonical health route in the Edge Function router.
+
 
 ---
 
@@ -925,7 +934,7 @@ Recommended PowerShell testing style:
 
 ```powershell
 Invoke-RestMethod `
-  -Uri "http://127.0.0.1:54321/functions/v1/api/api/health" `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/health" `
   -Method Get
 ```
 
@@ -966,3 +975,42 @@ The migration is complete when:
 14. No API keys are visible in frontend code or browser responses.
 15. All README instructions are updated.
 16. FastAPI backend is archived or clearly marked as legacy/local-only.
+
+
+## Phase 2 local auth testing example
+
+Use `supabase/functions/.env.local` with app-prefixed Supabase names:
+
+```env
+APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+APP_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+APP_ENV=local
+USE_MOCK_OPENAI=true
+USE_MOCK_USDA=true
+```
+
+Run locally:
+
+```powershell
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+Test register:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/register" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
+
+Test login:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/login" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"username":"yuri","password":"1234"}'
+```
