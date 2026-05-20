@@ -220,7 +220,7 @@ Conversations can be linked to a recipe via `recipe_id`.
 
 An experimental Supabase Edge Function backend is now being developed in parallel under `supabase/functions/api/`.
 
-- This is **Phase 3** of the migration and currently includes health, auth, and pantry routes for local testing.
+- This is **Phase 4** of the migration and currently includes health, auth, pantry, and recipe-storage routes for local testing.
 - The existing FastAPI backend in `backend/` remains the current working backend for app features.
 - Recipes, OpenAI, USDA, and chatbot edit flows are not migrated yet.
 - For local Edge Function env files, use app-prefixed names for Supabase secrets: `APP_SUPABASE_URL` and `APP_SUPABASE_SERVICE_ROLE_KEY` (avoid `SUPABASE_` prefix in `--env-file`).
@@ -293,6 +293,30 @@ PowerShell pantry GET after save:
 Invoke-RestMethod `
   -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
   -Method Get
+```
+
+PowerShell list recipes test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes" `
+  -Method Get
+```
+
+PowerShell get recipe by id test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID?user_id=YOUR_USER_ID" `
+  -Method Get
+```
+
+PowerShell delete recipe test:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID?user_id=YOUR_USER_ID" `
+  -Method Delete
 ```
 
 ---

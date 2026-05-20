@@ -121,3 +121,45 @@ export async function upsertPantry(
   const saved = data.items;
   return Array.isArray(saved) ? (saved as Array<{ name: string; amount: number; unit: string }>) : items;
 }
+
+
+export async function listUserRecipes(userId: string): Promise<Record<string, unknown>[]> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("recipes")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error("Failed to list recipes.");
+  return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+}
+
+export async function getRecipeById(recipeId: string, userId: string): Promise<Record<string, unknown> | null> {
+  const client = getClient();
+  const { data, error } = await client
+    .from("recipes")
+    .select("id, user_id, title, description, ingredients, instructions, servings, nutrition, tags, created_at, updated_at")
+    .eq("id", recipeId)
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error("Failed to fetch recipe.");
+  return data ? (data as Record<string, unknown>) : null;
+}
+
+export async function deleteRecipe(recipeId: string, userId: string): Promise<boolean> {
+  const client = getClient();
+  const recipe = await getRecipeById(recipeId, userId);
+  if (!recipe) return false;
+
+  const { error } = await client
+    .from("recipes")
+    .delete()
+    .eq("id", recipeId)
+    .eq("user_id", userId);
+
+  if (error) throw new Error("Failed to delete recipe.");
+  return true;
+}

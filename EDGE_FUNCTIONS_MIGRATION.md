@@ -1048,3 +1048,45 @@ Invoke-RestMethod `
   -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/pantry" `
   -Method Get
 ```
+
+
+## Phase 4 local recipe storage testing example
+
+Run locally:
+
+```powershell
+npx supabase functions serve api --env-file supabase/functions/.env.local --no-verify-jwt
+```
+
+List recipes:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/users/YOUR_USER_ID/recipes" `
+  -Method Get
+```
+
+Get one recipe:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID?user_id=YOUR_USER_ID" `
+  -Method Get
+```
+
+Delete recipe:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:54321/functions/v1/api/recipes/YOUR_RECIPE_ID?user_id=YOUR_USER_ID" `
+  -Method Delete
+```
+
+Verify in Supabase SQL:
+
+```sql
+select id, user_id, title, created_at
+from recipes
+where user_id = YOUR_USER_ID
+order by created_at desc;
+```
